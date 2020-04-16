@@ -1,0 +1,41 @@
+{
+    "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+    "@type": "SoftwareSourceCode",
+    "name": "NEMO: A Stellar Dynamics Toolbox",
+    "description": "NEMO is an extendible  Stellar Dynamics Toolbox, following an Open-Source Software model. It has various programs to create, integrate, analyze and visualize N-body and SPH like systems, following the pipe and filter architecture. In addition there are various tools to operate on images, tables and orbits, including FITS files to export/import to/from other astronomical data reduction packages. A large growing fraction of NEMO has been contributed by a growing list of authors. The source code consist of a little over 4000 files and a little under 1,000,000 lines of code and documentation, mostly C, and some C++ and Fortran. NEMO development started in 1986 in Princeton (USA) by Barnes, Hut and Teuben. See also ZENO (<a href=\"http://ascl.net/1102.027\">ascl:1102.027</a>) for the version that Barnes maintains.",
+    "identifier": "ascl:1010.051",
+    "author": [
+        {
+            "@type": "Person",
+            "givenName": "Joshua",
+            "familyName": "Barnes",
+            "id": "https://orcid.org/0000-0002-3371-1082"
+        },
+        {
+            "@type": "Person",
+            "givenName": "Piet",
+            "familyName": "Hut",
+            "id": "https://orcid.org/0000-0001-7565-5843"
+        },
+        {
+            "@type": "Person",
+            "givenName": "Peter",
+            "familyName": "Teuben",
+            "id": "https://orcid.org/0000-0003-1774-3436"
+        }
+    ],
+    "citation": "https://ui.adsabs.harvard.edu/abs/1995ASPC...77..398T",
+    "relatedLink": [
+        "http://www.astro.umd.edu/nemo/"
+    ],
+    "codeRepository": "https://github.com/teuben/nemo",
+    "referencePublication": [
+        {
+            "@type": "ScholarlyArticle",
+            "url": "https://ui.adsabs.harvard.edu/abs/1995ASPC...77..398T",
+            "id": "PLACEHOLDER: Add DOI (https://doi.org/xxxxxx) here"
+        }
+    ],
+    "version": "4.0.1",
+    "license": "PLACEHOLDER: Add license (ideally as a URL to the SPDX page - e.g. https://spdx.org/licenses/MIT.html) here"
+}

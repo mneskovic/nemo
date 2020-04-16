@@ -1,5 +1,5 @@
 DIR = src/kernel/io
-BIN = rsf tsf csf hisf
+BIN = rsf tsf csf bsf hisf
 NEED =$(BIN)
 
 help:
@@ -43,6 +43,10 @@ csf:
 # oops,there is a problem here, can't do this
 #	csf rsf.out - MyF convert=f2d | tsf - maxprec=t
 	$(EXEC) tsf csf.out				; nemo.coverage tsf.c
+
+bsf:
+	@echo Running bsf
+	$(EXEC) bsf rsf.out  test="5.55552 4.32102 1.2345 9.87654 2"; nemo.coverage bsf.c
 
 hisf:
 	@echo Running hisf

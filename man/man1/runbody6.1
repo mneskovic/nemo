@@ -1,6 +1,6 @@
-.TH RUNBODY6 1NEMO "21 February 2019"
+.TH RUNBODY6 1NEMO "26 April 2019"
 .SH NAME
-runbody6 \- Hermite N-body code with optional stellar evolution, frontend to nbody6 and nbody6++
+runbody6 \- Hermite N-body code with optional stellar evolution, NEMO frontend to nbody6 and nbody6++
 .SH SYNOPSIS
 .nf
 \fBrunbody6\fP [parameter=value]
@@ -8,7 +8,7 @@ runbody6 \- Hermite N-body code with optional stellar evolution, frontend to nbo
 \fBnbody6++  \fP\fI < nbody6.in\fP
 .fi
 .SH DESCRIPTION
-\fBrunbody6\fP is a NEMO frontend to the Aarseth family NBODY6++ program.
+\fBrunbody6\fP is a NEMO frontend to the Aarseth family NBODY6(++) program.
 It creates a run directory, prepares
 a parameter input file, and optionally input \fI(snapshot(5NEMO)\fP data, and runs
 the NBODY6(++) program. This can be particularly useful if you need to run a lot of
@@ -26,7 +26,10 @@ which overrides the default \fBkz=\fP. For example to turn off KS, use
       KZ15=0 KZ30=0
 .fi
 note the all-caps name of these indexed keywords. Since in NBODY6++ this vector
-has 50 elements, overriding them with an indexed parameter may be easier.
+has 50 elements, overriding them with an indexed parameter may be easier. It also
+bypasses any decisions of using the correct default for certain KZ's that is done
+in the kz= vector. For example, for nbody6=1 the default value for kz(22)=2 will
+be reset to kz(22)=3, but by setting KZ22=2 you can cheat and override these.
 .SH PARAMETERS
 The following parameters are recognized in any order if the keyword
 is also given: 
@@ -130,14 +133,23 @@ Non-zero options for alternative paths (up to 50)
 31	Centre of mass correction after energy check.
 32	Increase of output intervals (based on single particle energy).
 33	Block-step diagnostics at main output (=2: active pipes).
-34 #	Roche lobe overflow (suppressed).
+34 	Roche lobe overflow (suppressed).
 35	Time offset (global time from TTOT = TIME + DTOFF; offset = 100).
 36	Step reduction for hierarchical systems (not recommended).
 37	Step reduction for encounters with high-velocity particles.
-38 #	Multiple use of GRAPE-6 (sleep 1 sec after each timer check).
+38 	Multiple use of GRAPE-6 (sleep 1 sec after each timer check).
 39	Neighbour list (=-1: on host; =0: full list or closest on GRAPE).
-
-40-50   Description to come, so far this is NBODY4's KZ vector described
+40      Use force and first deriv to estimate time steps (0), >0 uses Flploy2
+41      proto-star evolution properties
+42      Initial binary distribution
+43      (unused)
+44      (unused)
+45      (unused)
+46      HDF5/binary/ANSI format
+47      frequency of KZ(47) output
+48      (unused)
+49      compute moments of inertia (Chr. Theis)
+50      for unpert KS binary.
 
 #	currently surpressed
 .fi
@@ -200,12 +212,16 @@ way the user can override single elements of the kz= vector, and using a default
 for the long kz= vector. For example "kz=@kz.def KZ22=2 KZ5=2". See \fIgetparam(3NEMO)\fP
 for a description of indexed keywords.
 .TP
-\fBexe=\fP
-Name of the nbody6 executable in the $PATH. Both nbody6 and nbody6++ are supported.
-Default: nbody6++
-.TP
 \fBnbody6=0|1\fB
-Support mode for nbody6:  0=nbody6, 1=nbody6++ (default)
+Support mode for nbody6:  1=nbody6, 0=nbody6++ (default)
+.TP
+\fBexe=\fP
+Name of the nbody6 executable in your $PATH (absolute or relative path also allowed).
+Both nbody6 and nbody6++ are supported.
+The default for \fBexe\fP depends on the value for \fBnbody6=\fP:   1=nbody6  0=nbody6++
+Note that for nbody6=1 the default nbody6 executable is the single-processing version,
+there is also a parallel version, dubbed \fBnbody7.sse\fP. For nbody6++ there is
+the default \fBnbody6++.sse\fP and the possibly faster \fBnbody6++.avx\fP available.
 .SH EXAMPLES
 \fBnbody6\fP can also be used to generate snapshots. Here is an example
 to create a 1024 body homogeneous sphere in the directory
@@ -219,15 +235,21 @@ run1 and a plummer sphere in run2.
 
 .fi
 .PP
-You can also supply existing NEMO snapshots as initial conditions
+You can also supply existing NEMO snapshots as initial conditions, this is actually the best supported way to use
+runbody6:
 .nf
     % mkplummer p1024 1024
     % runbody6 p1024 run3 tcrit=1
 .fi
 .SH CAVEATS
-Small N systems may need to be tuned with larger \fBrs0=\fP and \fBnnbopt=\fP.
+Small N systems may need to be tuned with larger \fBrs0=\fP and \fBnnbopt=\fP, but don't even think of trying a 3-body problem.
 .PP
 The dreaded CALCULATIONS HALTED message means you will need to consult the NBODY6++ manual
+.PP
+The interface has been primarely tested with nbody6++, it's possible that some differences between
+nbody6 and nbody6++ have not been taken care of.
+.SH BUGS
+In mode nbody6=1 the end-time does not seem to be reached. Seem to halt at tcrit-dtadj ?
 .SH SEE ALSO
 runbody1(1NEMO), nbody2(1NEMO), nbody4(5NEMO), snapshot(5NEMO), u3tos(1NEMO), stou4(1NEMO), snapprint(1NEMO)
 .PP
@@ -247,5 +269,7 @@ Peter Teuben
 .nf
 .ta +1.0i +4.0i
 20-feb-2019	V0.1 cloned off runbody4, some of keyword descriptions not complete yet		PJT
-22-feb-2019	V0.5 support nbody6/nbody6++
+22-feb-2019	V0.5 support nbody6/nbody6++	PJT
+5-apr-2019	V0.7 support writing snapshots without virtual particles	PJT
+26-apr-2019	V0.8 reversed logic of nbody6=, fix  KZ22 option for nbody6=1	PJT
 .fi

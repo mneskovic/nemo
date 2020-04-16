@@ -3,7 +3,9 @@
  *	
  *  19-feb-2019  V0.1     draft for nbody6++                             PJT
  *                         
- *  CAVEAT:    this is optimized to read a NEMO snapshot and process that.
+ *  CAVEAT:    this is optimized to read a NEMO snapshot and process that and
+ *             write a NEMO snapshot.
+ *             Although it (should) work with nbody6, it was developed with nbody6++
  * 
  */
 
@@ -44,7 +46,7 @@ string defv[] = {
     "rbar=1.0\n       mean radius of system",
     "zmbar=0.5\n      mean mass of system, in solar units",
 
-    "kz=0 0 1 0 0 0 5 0 0 1  0 0 0 0 2 0 0 0 0 0  1 2 2 0 0 2 0 0 0 2  0 0 2 0 0 0 1 0 0 0  0 0 0 0 0 0 0 0 0 0\n",
+    "kz=0 0 1 0 0 1 5 0 0 1  0 0 0 0 2 1 1 0 0 0  1 2 0 0 0 2 0 0 0 2  0 0 2 0 0 0 1 0 0 1  0 0 0 0 0 0 0 0 0 0\n",
       "Non-zero options for alternative paths (see below)\n"
       "       1  COMMON save on unit 1 at end of run (=2: every 100*NMAX steps).\n"
       "       2  COMMON save on unit 2 at output (=1); restart if DE/E > 5*QE (=2).\n"
@@ -74,7 +76,7 @@ string defv[] = {
       "      19  Stellar evolution and mass loss (=1: old supernova scheme;\n"
       "                      =3: Eggleton, Tout & Hurley; >4: Chernoff--Weinberg).\n"
       "      20  Initial mass function (=0,1: Salpeter; >1: various, see IMF).\n"
-      "      21  Extra output (>0: model, etc; >1: CENTRE; >2: MTRACE; >3: GLOBAL).\n"
+      "      21  Extra output (>0: model, etc; >1: CENTER; >2: MTRACE; >3: GLOBAL).\n"
       "      22  Initial conditions on unit 10 (=1: output; =2,3(unscaled): input).\n"
       "      23  Escaper removal (>1: diagnostics in file ESC; =2: angles unit #6;\n"
       "                           >1: tidal tails output if #14 = 3).\n"
@@ -87,7 +89,7 @@ string defv[] = {
       "      28  (not used).\n"
       "    # 29  Boundary reflection for hot system (suppressed).\n"
       "      30  Chain regularization (=1: basic; >1: main output; >2: each step).\n"
-      "      31  Centre of mass correction after energy check.\n"
+      "      31  Center of mass correction after energy check.\n"
       "      32  Increase of output intervals (based on single particle energy).\n"
       "      33  Block-step diagnostics at main output (=2: active pipes).\n"
       "    # 34  Roche lobe overflow (suppressed).\n"
@@ -141,14 +143,14 @@ string defv[] = {
     
     "kstart=1\n       Running mode (1=new 2=restart 3,4,5=restart w/ new par",
     "tcomp=10.0\n     Maximum allowed running time (minutes) **ignored **",
-    "gpid=0\n         Number of grape boards (starting from 0) ** if applicable **",
+    "gpid=0\n         Number of grape boards (starting from 0) ** ignored **",
 
     "format=%g\n      Format used for fort.10 input conditions if in= used",
     "KZ#=\n           [indexed] Override some kz= keywords",
-    "exe=nbody6++\n   Name of the executable",
-    "nbody6=1\n       run mode : 0=nbody6  1=nbody6++",
+    "nbody6=0\n       run mode : 1=nbody6  0=nbody6++",
+    "exe=\n           Name of the executable (default see nbody6=)",
 
-    "VERSION=0.5\n    21-feb-2019 PJT",
+    "VERSION=0.8b\n   13-may-2019 PJT",
     NULL,
 };
 
@@ -157,12 +159,6 @@ string usage="NEMO frontend to the NBODY6(++) code";
 string cvsid="$Id$";
 
 #define KZ_MAX  50
-
-#define KZ_OUT   3
-#define KZ_INI   4
-#define KZ_EXT  15
-#define KZ_MER  17
-#define KZ_COM  18
 
 void nemo_main(void)
 {
@@ -186,6 +182,10 @@ void nemo_main(void)
   stream datstr, histr, instr, outstr;
 
   warning("This is a not fully tested pre-release version %s",getparam("VERSION"));
+  if (!hasvalue("exe")) {
+    exefile = (nbody6_mode == 1) ? "nbody6" : "nbody6++";
+    dprintf(0,"exefile=%s\n",exefile);
+  }
 
   kstart = getiparam("kstart");
   tcomp =  getdparam("tcomp");
@@ -214,6 +214,10 @@ void nemo_main(void)
   for (k=0; k<KZ_MAX; k++) dprintf(1,"%d ",kz[k]);
   dprintf(1,"\n");
 
+  if (nbody6_mode == 1) {
+    if (kz[21] == 2) kz[21] = 3;  /* prevent scaling in nbody6 */
+  }
+
   for (k=0; k<KZ_MAX; k++) {
     if (indexparam("KZ",k+1)) {
       dprintf(0,"KZ %d=%d\n",k+1,getiparam_idx("KZ",k+1));
@@ -231,7 +235,10 @@ void nemo_main(void)
     strclose(instr);
     if (kz[21] == 0) {
       warning("patching kz[22]=2 since in= was given");
-      kz[21] = 2;
+      if (nbody6_mode == 0)
+	kz[21] = 2;          // nbody6++
+      else
+	kz[21] = 3;          // nbody6
     }
   } else
     nbody = getiparam("nbody");
@@ -285,23 +292,26 @@ void nemo_main(void)
   
   if (kstart == 1) {
 
-    if (nbody6_mode == 1)
+    if (nbody6_mode == 0)
       fprintf(datstr,"%d 999999.9 1.E6 40 40 640\n",kstart);
     else
       fprintf(datstr,"%d 999999.9\n",kstart);
 
-    if (nbody6_mode == 1)
+    if (nbody6_mode == 0)
       fprintf(datstr,"%d %d %d %d %d %d %d\n",nbody,nfix,ncrit,nrand,nnbopt,nrun,ncomm);
     else
       fprintf(datstr,"%d %d %d %d %d %d\n",nbody,nfix,ncrit,nrand,nnbopt,nrun);
-    
-    fprintf(datstr,"%g %g %g %g %g %g %g %g %g\n",etai,etar,rs0,dtadj,deltat,tcrit,qe,rbar,zmbar); // ok
+
+    if (nbody6_mode == 0)
+      fprintf(datstr,"%g %g %g %g %g %g %g %g %g\n",etai,etar,rs0,dtadj,deltat,tcrit,qe,rbar,zmbar);
+    else
+      fprintf(datstr,"%g %g %g %g %g %g %g %g %g\n",etai,etar,rs0,dtadj,deltat,tcrit+dtadj,qe,rbar,zmbar);   // work around tcrit bug in nbody6
 
     for (k=0; k<KZ_MAX; k++) {
       fprintf(datstr,"%d ",kz[k]);
       if (k%10 == 9)     fprintf(datstr,"\n");
     }
-    if (nbody6_mode == 1)
+    if (nbody6_mode == 0)
       fprintf(datstr,"%g %g %g %g %g %g %g\n",dtmin,rmin,etau,eclose,gmin,gmax,smax);
     else
       fprintf(datstr,"%g %g %g %g %g %g\n",dtmin,rmin,etau,eclose,gmin,gmax);
@@ -315,7 +325,7 @@ void nemo_main(void)
     else if (kz[4] == 4) 
       fprintf(datstr,"%g %g %g %g\n",semi,ecc,m1,m2);
 
-    if (nbody6_mode == 1)
+    if (nbody6_mode == 0)
       fprintf(datstr,"%g 0  0 0 \n",q); 
     else
       fprintf(datstr,"%g 0.0 0.0 0.0 %g\n",q,smax);    // READ (5,*)  Q, VXROT, VZROT, RTIDE, SMAX
@@ -323,7 +333,11 @@ void nemo_main(void)
     if (kz[7] == 1 || kz[7] == 3)
       fprintf(datstr,"%g %g %g %g 0 0 0 \n",semi,ecc,ratio,range);
 
+    /*  this one is not well documented - gleaned by Massimo from source code */
+    fprintf(datstr,"20000.0 2 0\n");
+    fprintf(datstr,"20000.0 2 0\n");
     fprintf(datstr,"# this last bogus line should not bother nbody6(++) as it's not supposed to be read\n");
+    fprintf(datstr,"# other perhaps useful info: nbody6=%d exefile=%s\n",nbody6_mode,exefile);
 
     strclose(datstr);
 
@@ -336,7 +350,7 @@ void nemo_main(void)
     if (hasvalue("in")) {
       dprintf(1,"Using ascii printout with format=%s to convert data for nbody6\n",fmt);
       sprintf(fmt7,"%s %s %s %s %s %s %s\n",fmt,fmt,fmt,fmt,fmt,fmt,fmt);
-      if (nbody6_mode == 1)
+      if (nbody6_mode == 0)
 	outstr = stropen("dat.10","w");
       else
 	outstr = stropen("fort.10","w");
@@ -351,13 +365,21 @@ void nemo_main(void)
     sprintf(runcmd,"%s < %s",exefile,parfile);
     run_sh(runcmd);
 
-    if (nbody6_mode == 1)
-      sprintf(runcmd,"cat conf.3_* > OUT3; u3tos OUT3 OUT3.snap mode=6 ; rm OUT3");
+    if (nbody6_mode == 0)
+      sprintf(runcmd,"cat `ls -tr conf.3_*` > OUT3; u3tos OUT3 OUT3.snap mode=6 nbody=%d ; rm OUT3",nbody);
     else
-      sprintf(runcmd,"u3tos in=OUT3 out=OUT3.snap mode=1");
+      sprintf(runcmd,"u3tos in=OUT3 out=OUT3.snap mode=1 nbody=%d",nbody);
     run_sh(runcmd);    
     
   } else {
-    error("kstart=%d not supported for NBODY6(++)",kstart);
+    error("kstart=%d not supported for NBODY6(++) yet; you will need to do it manually",kstart);
+    // for nbody6_mode==0
+    // kstart=2:   no further lines needed
+    //        3:   one line: DTADJ,DELTAT,DTADJ,TNEXT,TCRIT,QE,J,K
+    //        4:   one line: ETAI,ETAR,ETAU,DTMIN,RMIN,NCRIT,NNBOPT,SMAX
+    //        5:
+    // for nbody6_mode==1
+    // kstart=2:   standard restart
+    //       >2:   read new parameters (see modify.f)
   }
 }

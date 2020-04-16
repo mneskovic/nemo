@@ -1,10 +1,11 @@
-VERSION = NEMO V4.0 3-jan-2018 PJT
+VERSION = NEMO V4.2 13-mar-2020 PJT
 ################################################################################
 # 	$(NEMO)/Makefile: top level Makefile for full NEMO installation
+#       do not edit, it is derived from Makefile.in
 ################################################################################
 
 #  useful for MacOSX since it can't distinguish case for most users (grmpfff)
-.PHONY:  INSTALL install
+.PHONY:  INSTALL install scripts
 
 
 # The following subdirectories (1&2) are needed for installation, although only
@@ -38,15 +39,21 @@ CHECKFIL2 = $(NEMO)/adm/Usage \
 #  Currently accepted are:
 #	src 		- standard export (NEMO expects install targets)
 #	usr		- user contributions (have their own install methods)
-MAKEDIRS = src 
+#MAKEDIRS = src usr
+#MAKELIBS = corelibs dehnen
+MAKEDIRS = @MAKEDIRS@
+MAKELIBS = @MAKELIBS@
+NEMOTARS = @NEMOTARS@
+#MKNEMOS  = hdf4 hdf5 cfitsio fftw wcslib gsl
+MKNEMOS  = 
 
 ################################################################################
 # The following files/directories will be saved to a tar file
 # and used in incremental export tar files (Nightly/export.csh)
 # SRC is to select subsections of the whole src tree
 # To get all of NEMO, choose SRC=src usr (see e.g. tarkernel below)
+# --deprecated--
 #
-# @todo   this can go for 4.0
 SRC = src
 USR =
 #
@@ -80,7 +87,7 @@ NEMO_RC_CSH = $(NEMO)/nemo_local.csh
 NEMO_RC_SH  = $(NEMO)/nemo_local.sh
 
 #  Master site (Maryland) specific, and probably not used anywhere else
-FTPDIR = /local/ftp/pub/nemo/
+FTPDIR = /n/ftp/pub/nemo/
 SFTPDIR = chara.astro.umd.edu:$(FTPDIR)
 WWWDIR = $(NEMO)/local/www
 ################################################################################
@@ -88,13 +95,28 @@ WWWDIR = $(NEMO)/local/www
 #	----------Installation starts here------------
 # make sure you're in $(NEMO) from here
 
-SHELL = /bin/sh
+SHELL = /bin/bash
 
 # this should remain the first target in this Makefile, so a default "make" invocation goes here
-help:
+help:   install lsb
+
+install:
+	@echo "There is no install because NEMO is build in place. The usual procedure is"
 	@echo ""
-	@echo "There is no default make in NEMO. For installation"
-	@echo "guidelines use 'make install' or read the INSTALL file"
+	@echo "      ./configure  ....      -- run configure, with lots of options; try --help"
+	@echo "      make build1            -- 1: postconfig  (build would do all build1..4)"
+	@echo "      make build2            -- 2: libs + falcon"
+	@echo "      make build3            -- 3: bins"
+	@echo "      make build4            -- 4: mknemo build reconfirmation"
+	@echo "      make check             -- the testsuite"
+	@echo "      make bench             -- the benchmark"
+	@echo ""
+	@echo "After this, users will need to source the nemo_start.(c)sh file"
+	@echo "There is also some new python support via nemo_start.py"
+
+lsb:
+	@lsb_release -a
+
 
 help2:
 	@echo ""
@@ -108,8 +130,15 @@ help2:
 	@echo CC=$(CC)  CFLAGS=$(CFLAGS)
 	@echo FC=$(FC)  FFLAGS=$(FFLAGS)
 	@echo MAKE=$(MAKE) MFLAGS=$(MFLAGS)
+	@echo MKNEMOS=$(MKNEMOS)
 	@echo ""
 	@echo "Additional help targets: helpfind, helptar"
+
+# optional package installs, usually in $NEMO/opt via $NEMO/local during bootstrap
+mknemos:
+	@for mkn in $(MKNEMOS); do \
+	mknemo $$mkn;\
+	done
 
 # make sure all directories and files are present before install can take place
 dirs: 
@@ -133,6 +162,13 @@ dirs:
 	    touch $$i; \
 	    chmod a+w $$i; \
 	fi); done
+	@if [ -d $(NEMOTARS) ]; then \
+	    echo 'Symlink tars'; \
+	    rm tars; \
+	    ln -s $(NEMOTARS) tars; \
+	else \
+	    echo 'No tar symlink'; \
+	fi
 	@if [ ! -d include ]; then \
 	    ln -s inc include; \
 	fi
@@ -147,7 +183,7 @@ dirs:
 	@if [ ! -f $(MOTD) ]; then \
             echo Creating $(MOTD) file on `date`; \
             echo "***********************************************" > $(MOTD);\
-            echo "Nemo Release 3 ($(VERSION)) installed: " >> $(MOTD);\
+            echo "Nemo Release 4 ($(VERSION)) installed: " >> $(MOTD);\
 	    echo "  NEMOVER = $(NEMOVER)" >> $(MOTD); \
 	    echo "  `date` on `whoami`@`hostname`" >> $(MOTD); \
             echo "***********************************************">> $(MOTD);\
@@ -281,14 +317,6 @@ targit0:
 	tar zcf nemo_git.tar.gz nemo_git
 
 
-# deprecated
-tarfile:
-	@echo NEMO=$(NEMO)
-	@echo A tar file FILE=$(FILE) will be created.
-	@echo -n Hang on ...
-	tar -cf $(FILE) $(EXPORTA)
-	@echo ... All done!
-
 # autoconf/GIT based export
 #
 
@@ -363,34 +391,6 @@ test2:
 	@echo "<A HREF=ftp://ftp.astro.umd.edu/pub/nemo/$(NEMOTAR).gz> $(NEMOTAR).gz </A>"  > $(WWWDIR)/lastftp
 	@echo "(`date`)" >> $(WWWDIR)/lastftp
 
-tarkernel:
-	@echo KERNEL+SCRIPTS only for small bootstrap
-	@$(MAKE) tarfile ASCIIDIRS="inc src/kernel src/scripts" FILE=kernel.tar
-	@$(COMPRESS) kernel.tar
-	@echo All done
-	@ls -l kernel.tar*
-
-tarnbody:
-	@echo NBODY only 
-	@$(MAKE) tarfile ASCIIDIRS="src/nbody" FILE=nbody.tar
-	@$(COMPRESS) nbody.tar
-	@echo All done
-	@ls -l nbody.tar*
-
-tarorbit:
-	@echo ORBIT only 
-	@$(MAKE) tarfile ASCIIDIRS="src/orbit" FILE=orbit.tar
-	@$(COMPRESS) orbit.tar
-	@echo All done
-	@ls -l orbit.tar*
-
-tarbima: 
-	$(MAKE) tarfile FILE=checker.tar \
-	 "ASCIIDIRS=inc usr/bima\
-	  src/Makefile src/kernel/Makefile \
-	  src/kernel/io src/kernel/core src/kernel/misc src/scripts \
-	  src/tools/unproto"
-
 
 ##############################################################################
 #	Some helpful non-NEMO targets
@@ -408,46 +408,58 @@ makeindex:
 	@echo "Installing makeindex utility for LaTeX manuals"	(cd $(NEMO)/src/tools/makeindex;\
 	 $(MAKE);mv indexsrc/index $(NEMOBIN)/makeindex;$(MAKE) clean)
 
-#	internal PGPLOT install
+#	internal PGPLOT install (not recommended anymore)
 pgplot:
 	src/scripts/pgplot.install png=$(PNG) gif=$(GIF)
 
+#       some of the essentials that can be installed in $NEMO/opt
 cfitsio:
-	src/scripts/cfitsio.install
+	(source nemo_start.sh ; src/scripts/mknemo.d/cfitsio)
+
+hdf4:
+	(source nemo_start.sh ; src/scripts/mknemo.d/hdf4)
+
+hdf5:
+	(source nemo_start.sh ; src/scripts/mknemo.d/hdf5)
+
 
 # deprecated: superseded by glnemo2
 vogl:
 	src/scripts/nemo.vogl
 
-#	END
 
 
-install:
-	@echo "There is no official install from the root menu"
-	@echo "see also src/scripts/bootstrap how to bootstrap NEMO"
-	@echo "      or docs/install_nemo"
-	@echo ""
-	@echo "Typically you would do the following: (example for (t)csh)"
-	@echo "      ./configure  ....      -- run configure, with lots of options; try --help"
-	@echo "      source nemo_start.csh  -- or .sh for bash"
-	@echo "      make postconfig        -- basic post configure things"
-	@echo "      rehash                 -- update search path (only for .csh)" 
-	@echo "      make libs              -- install the libraries"
-	@echo ""
-	@echo "If you want, test to compile two basic routines:"
-	@echo "      mknemo tsf tabhist nemoinp"
-	@echo "      rehash"
-	@echo "      nemoinp 1:10 | tabhist -"
-	@echo "to test compile and link"
-	@echo ""
-	@echo "Else go and compile and test the NEMO standard suite of binaries:"
-	@echo "      src/scripts/testsuite -b"
-	@echo ""
-	@echo "Or if you want to install all binaries:"
-	@echo "      make bins"
-#	@echo "Any subsquent programs should be installed with the mknemo script,"
-#	@echo "eg."
-#	@echo "      mknemo mkplummer snapplot tabhist orbsos"
+build:   build1 build2 build3 build4
+
+build1:
+	(source nemo_start.sh ; $(MAKE) postconfig mknemos)
+	@echo 'Continue with "make build2"'
+
+build2:
+	(source nemo_start.sh ; $(MAKE) libs)
+	@echo 'Continue with "make build3"'
+
+build3:
+	(source nemo_start.sh ; $(MAKE) bins)
+	@echo 'Continue with "make build4"'
+
+BINS4 = tsf tabhist tsd orboom sdinfo
+build4:
+	(source nemo_start.sh ; mknemo  $(BINS4))
+	@echo 'Continue with "make check"'
+
+
+# the exact python method under development
+
+python: anaconda3
+
+python_setup: nemo_start.py
+	python -c 'import sys; print(sys.path)'
+
+anaconda3:
+	src/scripts/install_anaconda3
+
+
 
 helpconfig:
 	@echo config, configure, config_extra, config_clean
@@ -460,10 +472,8 @@ config:	configure
 configure:	configure.ac
 	autoconf
 
-# nemo.pl can be deprecated
 config_extra:
 	cp config.h makedefs $(NEMOLIB)
-	(chmod +x nemo.pl; cp nemo.pl $(NEMOBIN))
 
 DIFF = diff
 
@@ -507,7 +517,8 @@ cleanall:
 cleansrc:
 	(cd src; $(MAKE) clean)
 
-libs:	corelibs dehnen
+# via configure it will select:    MAKELIBS = corelibs dehnen     
+libs:	$(MAKELIBS)
 	@echo Done at `date`
 
 # gyrfalcON
@@ -546,10 +557,17 @@ testsuite:
 	@echo 'src/scripts/testsuite -b'
 
 check:
-	src/scripts/testsuite
+	(source nemo_start.sh; src/scripts/testsuite)
+	@echo 'Continue with "make checklog" (if you see any FAILS)'
+
+# show the latest testsuite build log
+checklog:
+	cat `ls -tr tmp/test*/testsuite.log | tail -1`
+
+TIME = /usr/bin/time
 
 bench:
-	time src/scripts/nemo.bench
+	(source nemo_start.sh; $(TIME) src/scripts/nemo.bench bsf=1)
 
 #
 TEST=""

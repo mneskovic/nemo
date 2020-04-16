@@ -1,0 +1,20 @@
+#! /bin/bash
+#
+
+version=2.6
+wget=wgetc
+
+for arg in $*; do
+  export $arg
+done
+
+cd $NEMO/local
+$wget ftp://ftp.gnu.org/gnu/gsl/gsl-$version.tar.gz
+
+tar zxf gsl-$version.tar.gz
+cd gsl-$version
+./configure --prefix=$NEMO/opt
+make -j
+make install
+
+echo Installed version=$version

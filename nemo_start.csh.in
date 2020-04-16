@@ -16,8 +16,6 @@
 #                                       Things via configure
 setenv NEMO          @NEMO@
 setenv NEMOHOST      @NEMOHOST@
-setenv YAPP          @YAPP_DEF@
-setenv PGPLOT_DIR    @PGPLOT_DIR@
 
 #  				        Basic derived environment variables
 setenv NEMOLIB     $NEMO/lib
@@ -35,6 +33,8 @@ setenv NEMOVER   `cat $NEMO/VERSION`
 setenv NEMOSYS   `uname -s`
 setenv NEMOSITE  `hostname`
 
+setenv YAPP          @YAPP_DEF@
+setenv PGPLOT_DIR    @PGPLOT_DIR@
 
 #   MANPATH isn't so standard as you may think....
 #	Ultrix doesn't handle MANPATH
@@ -59,7 +59,7 @@ else
  if ($status) setenv MANPATH $NEMO/man:$MANPATH
 endif
 
-setenv MANPATH ${MANPATH}:${NEMO}/usr/dehnen/falcON/man
+# setenv MANPATH ${MANPATH}:${NEMO}/usr/dehnen/falcON/man  - manually copied into $NEMO/man
 
 
 # Set various 'external' things we sometimes need, but only if not set
@@ -122,9 +122,9 @@ setenv VDEVICE X11
 if (1) then
 
   if ($?LD_LIBRARY_PATH) then
-    setenv LD_LIBRARY_PATH ${NEMOLIB}:${LD_LIBRARY_PATH}
+    setenv LD_LIBRARY_PATH ${NEMOLIB}:${NEMO}/opt/lib:${LD_LIBRARY_PATH}
   else
-    setenv LD_LIBRARY_PATH ${NEMOLIB}
+    setenv LD_LIBRARY_PATH ${NEMOLIB}:${NEMO}/opt/lib
   endif
   if ("$PGPLOT_DIR" != "$NEMOLIB") then
     setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:$PGPLOT_DIR
@@ -159,21 +159,14 @@ if (-e $NEMO/usr/zeno/ZENORC)  source $NEMO/usr/zeno/ZENORC
 if (-e $NEMO/nemo_local.csh)   source $NEMO/nemo_local.csh
 if (-e $HOME/.nemo_local.csh)  source $HOME/.nemo_local.csh
 
+if (-e $NEMO/python_start.csh) source $NEMO/python_start.csh
 
-if ($path[1] == ".") then
-  set path = ( . $NEMOBIN $path[2-] )
-else
-  set path = ( $NEMOBIN $path )
-endif
+
+set path = ( $NEMOBIN $NEMO/opt/bin $path )
 rehash
 
-# provide alias to load falcON, if present
-#alias falcON 'setenv FALCON $NEMO/usr/dehnen/falcON; source $FALCON/falcON_start'
+# falcON
 setenv FALCON $NEMO/usr/dehnen/falcON
-source $FALCON/falcON_start
-
-# provide alias to end NEMO
-#alias omen 'source $NEMO/nemo_end; unalias omen; alias nemo source $NEMO/nemo_start'
-#alias omen 'source $NEMO/nemo_end; unalias omen'
+source $FALCON/falcON_start.csh
 
 

@@ -1,4 +1,4 @@
-.TH TABHIST 1NEMO "16 January 2014"
+.TH TABHIST 1NEMO "2 March 2020"
 .SH NAME
 tabhist \- histogram plotter and gaussian fit for tabular data
 .SH SYNOPSIS
@@ -46,7 +46,8 @@ Maximum value along X-axis to include
 \fBbins=\fIn_bins\fP
 If one number is given, it is the number of (equal size) bins between 
 min and max.  If more than one number is given, they are the bin edges
-(thus one more than the number of bins need to be supplied).
+(thus one more than the number of bins need to be supplied). One rule of thumb
+is that the number of bins be the square root of the number of values.
 [default: \fB16\fP].
 .TP
 \fBmaxcount=\fIcount\fP
@@ -95,6 +96,10 @@ If true, the residual (data - fit) will be plotted as a dashed line.
 \fBcumul=t|f\fP
 Plot a cumulative histogram instead. If set, the keywords gauss, residual,
 and ylog are automatically re-set to false.  
+[Default: \fBf\fP].
+.TP
+\fBnorm=t|f\fP
+Normalize the cumulative histogram to 1. By default the maxcount is used.
 [Default: \fBf\fP].
 .TP
 \fBmedian=t|f\fP
@@ -164,5 +169,6 @@ xx-mar-88	V1.0: created          	PJT
 1-jun-10	6.0: bins= now allowed to have manual edges	PJT
 22-aug-12	6.2: added torben= option for fast large-N median	PJT
 16-jan-14	6.4: added mad= 	PJT
+2-mar-2020	7.1: added norm=	PJT
 .fi
 

@@ -4,7 +4,12 @@
 #    diff $NEMO/makedefs $NEMOLIB
 #  ((the one in $NEMO is the configure generated one that gets copied))
 #  ((to $NEMOLIB via the "make config_extra" command during the))
-#  (("make postconfig" step of the install))
+#  (("make build1" step of the install))
+
+#  Note that the falcON tools (e.g. gyrfalcON) do not use this file.
+#  See the $NEMO/usr/dehnen/utils/make.* files to figure out how
+#  to tune these tools. Walter did a pretty darn good job, see if you
+#  beat that!
 
 #  DSO linking: might need to wrap offending libraries 
 #       -Wl,--no-as-needed -lX11 -Wl,-as-needed
@@ -14,16 +19,6 @@
 #  This is the current default in configure (to use it)
 #  Comment the next line if you do not want this, or use --without-dso
 NEMO_CFLAGS1 = @DSO_LINK@
-
-
-
-# we could actually also define a set of NEMO, and derived, variables, such that the build
-# system does not need to source nemo_start
-# NEMO = @NEMO@
-# NEMOLIB = $(NEMO)/lib
-# NEMOBIN = $(NEMO)/bin
-# NEMOOBJ = $(NEMO)/obj
-# NEMOINC = $(NEMO)/inc
 
 
 # handy for recursion
@@ -36,45 +31,52 @@ FC  = @F77@
 F77 = @F77@
 CXX = @CXX@
 
-# HDF library
-
-# common examples:
+# HDF4 library
 #HDF_INC=-I/local/include -I/usr/local/include -I/usr/include/hdf
-#
-# Might need to add something like:   -L/local/lib -R /local/lib
-# if your solaris system requires that
 #HDF_LIB=-ldf -ljpeg -lz -lsz
-
 HDF_INC = @HDF_INC@
 HDF_LIB = @HDF_LIB@
 
-#  PVM library
-
-PVM_INC = @PVM_INC@
-PVM_LIB = @PVM_LIB@
+#  HDF5 library
+# --with-hdf5-incdir=   --with-hdf5-libdir=
+#HDF5_INC = `pkg-config --cflags hdf5`
+#HHD5_LIB = `pkg-config --libs hdf5`
+HDF5_INC = @HDF5_INC@
+HDF5_LIB = @HDF5_LIB@
 
 #  PNG library
+#PNG_LIB = `pkg-config --libs libpng`
 PNG_LIB = @PNG_LIB@
 
 #  CFITSIO library
-
+#CFITSIO_INC = `pkg-config --cflags cfitsio`
+#CFITSIO_LIB = `pkg-config --libs cfitsio`
 CFITSIO_INC = @CFITSIO_INC@
 CFITSIO_LIB = @CFITSIO_LIB@
 
 #  MIRIAD library
-#	(could also depend on $(MIR) and $(MIRLIB) if you don't like these)
 MIRIAD_INC = @MIRIAD_INC@
 MIRIAD_LIB = @MIRIAD_LIB@
 
 #	GSL
-GSL_CFLAGS = @GSL_CFLAGS@
-GSL_LIBS   = @GSL_LIBS@
+#GSL_INC = @GSL_CFLAGS@
+#GSL_LIB = @GSL_LIBS@
+GSL_INC = 
+GSL_LIB =
+
+#	PLPLOT
+#PLPLOT_INC = -I/usr/include/plplot
+#PLPLOT_LIB = -lplplot
+PLPLOT_INC = @PLPLOT_CFLAGS@
+PLPLOT_LIB = @PLPLOT_LIBS@
 
 #	FFTW
 #       -lfftw3, or -lfftw3f or -lfftw3l (depending on precision library, for float or long double)
 #       [actually still not used yet]
-FFTW_CFLAGS = @FFTW_CFLAGS@
-FFTW_LIBS   = @FFTW_LIBS@
+#FFTW_CFLAGS = @FFTW_CFLAGS@
+#FFTW_LIBS   = @FFTW_LIBS@
+FFTW_INC = 
+FFTW_LIB =
 
 
 #	READLINE
@@ -105,23 +107,23 @@ F77_CMAIN_FFLAGS = @F77_CMAIN_FFLAGS@
 #  via configure.
 YAPPLIB = $(NEMOLIB)/yapp_@YAPP_NAME@.o @YAPP_LIBS@
 
-# Solaris 2.6+: -R /opt/SUNWspro/lib -L/opt/SUNWspro/lib -lF77 -lM77 -lV77 -lsunmath  
-
 ## C compiler:
 #set opts="-rdynamic -ansi -fwritable-strings -Wconversion -Wnested-externs"
 #exec gcc -fPIC -Dlinux -DSYSV -I$NEMOINC -I$NEMOLIB -L$NEMOLIB $opts $* $link
 ## Fortran compiler
 #  some older gnu compilers may still need -fno-globals
 
-NEMO_CFLAGS = @NEMO_CFLAGS@ -I$(NEMOINC) -I$(NEMOLIB) @XINCS@ $(GSL_CFLAGS) $(MACH) $(NEMO_CFLAGS1)
-NEMO_FFLAGS = @NEMO_FFLAGS@
+INC_FLAGS = -I$(NEMOINC) -I$(NEMOLIB) -I$(NEMO)/opt/include @HDF_INC@ @HDF5_INC@ @XINCS@
+
+NEMO_CFLAGS = @NEMO_CFLAGS@  $(MACH) $(NEMO_CFLAGS1) $(INC_FLAGS)
+NEMO_FFLAGS = @NEMO_FFLAGS@  $(INC_FLAGS)
 NEMO_LDFLAGS = 
-NEMO_LIBS   = -L$(NEMOLIB)          -lnemo @LOADOBJ_LIBS@ $(GSL_LIBS) $(RDL_LIBS) $(CFITSIO_LIB) @MATH_LIBS@ @MACOS_LIBS@
-NEMO_LIBSPP = -L$(NEMOLIB) -lnemo++ -lnemo @LOADOBJ_LIBS@ $(GSL_LIBS) $(RDL_LIBS) $(CFITSIO_LIB) @MATH_LIBS@ @MACOS_LIBS@
+NEMO_LIBS   = -L$(NEMOLIB) -L$(NEMO)/opt/lib          -lnemo @LOADOBJ_LIBS@ $(GSL_LIBS) $(RDL_LIBS) $(CFITSIO_LIB) @MATH_LIBS@ @MACOS_LIBS@
+NEMO_LIBSPP = -L$(NEMOLIB) -L$(NEMO)/opt/lib -lnemo++ -lnemo @LOADOBJ_LIBS@ $(GSL_LIBS) $(RDL_LIBS) $(CFITSIO_LIB) @MATH_LIBS@ @MACOS_LIBS@
 
 #			some graphics libraries:
 GLLIBS = @GLLIBS@
-XLIBS = @XLIBS@
+XLIBS  = @XLIBS@
 
 #			generic compile flags for C,Fortran,Linker
 # If you must absolutely be pedantic, the following gnu compiler flags are the recommended ones
@@ -129,7 +131,7 @@ XLIBS = @XLIBS@
 # PEDFLAG="-ansi -pedantic -Werror -Wall -W -Wmissing-prototypes -Wstrict-prototypes -Wtraditional -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align  -Wwrite-strings -Wnested-externs  -fshort-enums -fno-common -Dinline= -g -O4"
 #   optimization only
 
-OPT = @CFLAGS@
+OPT  = @CFLAGS@
 FOPT = @FFLAGS@
 LOPT = @LDFLAGS@
 #   for shared libaries
@@ -137,7 +139,7 @@ CCSHARED = @CCSHARED@
 #   everything 
 CFLAGS  = $(OPT) $(CCSHARED) $(NEMO_CFLAGS)
 FFLAGS  = $(OPT) $(CCSHARED) $(NEMO_FFLAGS)
-LDFLAGS = $(OPT)            $(NEMO_LDFLAGS)
+LDFLAGS = $(OPT)             $(NEMO_LDFLAGS)
 CPPFLAGS = @CPPFLAGS@
 
 RANLIB = @RANLIB@

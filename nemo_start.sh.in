@@ -13,12 +13,11 @@
 #   BASH interactive shell uses ~/.bashrc     
 #        login shell       uses ~/.bash_login (or .bash_profile)
 #   Note Linux uses the interactive shell, Mac uses the login shell
+#   ZSH users should also be able to ued this file.
 #
 #                                       Things via configure
 export          NEMO=@NEMO@
 export      NEMOHOST=@NEMOHOST@
-export          YAPP=@YAPP_DEF@
-export    PGPLOT_DIR=@PGPLOT_DIR@
 
 #  				        Basic derived environment variables
 export NEMOLIB=$NEMO/lib
@@ -36,18 +35,26 @@ export NEMOVER=`cat $NEMO/VERSION`
 export NEMOSYS=`uname -s`
 export NEMOSITE=`hostname`
 
+export YAPP=@YAPP_DEF@
+export PGPLOT_DIR=@PGPLOT_DIR@
 
-#  todo: fix the MANPATH
-echo Warning: no MANPATH yet
+
+if [ -z "$MANPATH" ]; then
+  export MANPATH=$NEMO/man
+else
+  export MANPATH=$NEMO/man:$MANPATH
+fi
+# $NEMO/usr/dehnen/falcON/ was manually merged into $NEMO/man
+
 
 #  If you use the VoGL library for xyzview, this is the only reasonable default
 export VDEVICE=X11
 
 if [ 1 ]; then
   if [ -z "$LD_LIBRARY_PATH" ]; then
-    export LD_LIBRARY_PATH=$NEMOLIB
+    export LD_LIBRARY_PATH=$NEMOLIB:$NEMO/opt/lib
   else
-    export LD_LIBRARY_PATH=$NEMOLIB:$LD_LIBRARY_PATH
+    export LD_LIBRARY_PATH=$NEMOLIB:$NEMO/opt/lib:$LD_LIBRARY_PATH
   fi
   # if ("$PGPLOT_DIR" != "$NEMOLIB") then
 
@@ -56,9 +63,9 @@ if [ 1 ]; then
   # similar to the LD_PRELOAD on linux.  This might be needed for
   # libunsio.{dylib,so} is a case where this was needed
   if [ -z "$DYLD_LIBRARY_PATH" ]; then
-    export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH
+    export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEMO/opt/lib
   else
-    export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DYLD_LIBRARY_PATH
+    export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NEMO/opt/lib:$DYLD_LIBRARY_PATH
   fi
 fi
 
@@ -76,10 +83,12 @@ test -f $NEMO/usr/zeno/ZENORC   &&     echo "No ZENO support for bash yet"
 test -f $NEMO/nemo_local.sh     &&     source $NEMO/nemo_local.sh
 test -f $HOME/.nemo_local.sh    &&     source $HOME/.nemo_local.sh
 
+# optional python
+test -f $NEMO/python_start.sh   &&     source $NEMO/python_start.sh
+
 # optional dot check?
-export PATH=$NEMOBIN:$PATH
+export PATH=$NEMOBIN:$NEMO/opt/bin:$PATH
 
 # falcON 
-echo Only partial falcON support for bash 
-export LD_LIBRARY_PATH=$NEMO/usr/dehnen/utils/lib:$NEMO/usr/dehnen/falcON/lib:$LD_LIBRARY_PATH
-export DYLD_LIBRARY_PATH=$LD_LIBRARY_PATH
+export FALCON=$NEMO/usr/dehnen/falcON
+source $FALCON/falcON_start.sh

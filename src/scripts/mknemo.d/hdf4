@@ -1,0 +1,32 @@
+#! /bin/bash
+#
+#  Install HDF5 within NEMO
+#
+#
+#  25-dec-2019  drafted
+#     mar-2020  wgetc
+#
+#  On a mac you may see build failures due to a missing libjpeg
+#  hdf4 needs jpeg and z (-ldf -ljpeg -lz)
+#
+#          ?? brew install jpeg    (didn't work for me)
+
+# if ($?NEMO == 0) set NEMO=`pwd`
+
+version=4.2.14
+wget=wgetc
+
+for arg in $*; do
+  export $arg
+done
+
+cd $NEMO/local
+$wget https://support.hdfgroup.org/ftp/HDF/releases/HDF$version/src/hdf-$version.tar.gz
+
+tar zxf hdf-$version.tar.gz
+cd hdf-$version
+
+./configure --prefix=$NEMO/opt
+make -j
+make install 
+

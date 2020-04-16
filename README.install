@@ -1,7 +1,36 @@
-Preconditions to Installation
-=============================
-To build and run nemo you will need to install a few packages if you don't 
-have them already.
+Preconditions for Installation
+==============================
+
+To build the basics of NEMO you need compilers (C/C++/Fortran).  C is essential,
+C++ and Fortran highly recommended.  You will also need the usual build tools
+(make, csh, cmake)
+
+C		essential
+C++		highly recommended
+Fortran    	highly recommended
+csh		essential (some scripts are still in csh)
+make 		essential
+cmake		highly recommended
+pgplot    	recommended for yapp_pgplot
+cfitsio		recommended for some tools
+hdf4     	recommended for some tools
+hdf5		recommended for some tools
+python3		recommended
+swig
+boost           recommended (for uns_projects)
+
+Depending on your packaging tools (apt, yum, brew, port, ....) these are hidden under
+various package names
+
+dpkg -L pgplot5
+dpkg -S /usr/include/cpgplot.h
+dpkg -l
+
+rpm -ql pgplot
+rpm -qf /usr/lib64/libpgplot.so.5.2.2
+rpm -qa
+
+
 
 -gfortran
 -libx11-dev
@@ -11,69 +40,44 @@ have them already.
 -build-essential
 -cmake
 -csh
+-pgplot5
+-libhdf4-dev
+-libhdf5-dev
+-hdf5-tools
 
 
-All of the above can be installed using the bash shell command
 
-sudo apt install PACKAGENAME
+DOWNLOAD and INSTALLATION: two examples 
+=======================================
 
+Perhaps the easiest way to install nemo is using the docs/install_nemo
+script. The following example shows how to bootstrap this:
 
-
-DOWNLOAD and INSTALLATION using install_nemo script
-===================================================
-
-The easiest way to install nemo is using the included install_nemo script.
-If you haven't already downloaded nemo, these commands should get you up and
-running.  The following will download the latest version of nemo from github
-and install it into your $HOME/opt/nemo directory.
-
- wget https://teuben.github.io/nemo/install_nemo
- chmod +x install_nemo
- ./install_nemo nemo=$HOME/opt/nemo
- source $HOME/opt/nemo/nemo_start.csh
-
- *replace .csh with .sh in the last line if you are running the command from bash
-
-DOWNLOAD using git
-==================
-If you haven't yet installed git, it can be obtained through the package manager.  For
-example
-
-sudo apt install git
-
-To download the files using git, you can use git clone from your terminal.  For example
-
-git clone https://github.com/teuben/nemo.git
-
-Then you can proceed to "INSTALLATION using instlal_nemo script" below
+    wget https://teuben.github.io/nemo/install_nemo
+    csh -f install_nemo nemo=nemo
+    source nemo/nemo_start.sh
 
 
-INSTALLATION using install_nemo script
-======================================
-You can also use the script if you have already downloaded nemo from github
-or from another source.  The install_nemo script is located in nemo/docs.  Here
-is an example assuming you are already in your nemo directory.
+if you prefer the more classic approach, we do use configure under the hood
 
-cd docs
-./install_nemo nemo=$HOME/opt/nemo
-source $HOME/opt/nemo/nemo_start.csh
+    git clone https://github.com/teuben/nemo
+    cd nemo
+    ./configure ...
+    make build
+    source nemo_start.sh
 
-*replace .csh with .sh in the last line if you are running the command from bash
 
-*IMPORTANT*
-==========
-If you would like to use giza which allows for pdf output as opposed to postscript,
-you must install using the giza=1 argument to the install_nemo script.  For example
+The configure script has many options, use --help to review them. The
+install_nemo script has a number of key=val type command line options that
+will aid in using some of the configure options.
 
-./install_nemo giza=1
-
-This is one example of many arguments you can pass to install_nemo.
 
 MANUAL INSTALLATION OVERVIEW:
 =============================
 
-This document gives some background information in case the more
-automated script(s) to install NEMO have failed you.
+The remainder of this document gives some more examples and background
+information in case the more automated script(s) to install NEMO have
+failed you.
 
 Installation of NEMO V4.x roughly follows that of most open source
 packages, except that NEMO does not install its products in an
@@ -83,31 +87,48 @@ where things like your search path are modified for your shell.  Hence
 the basic scheme is more one of (except commands are different and
 detailed below!!!):
 
-	configure [options]
-	source nemo_start.csh
-	make
-
-This installation has recently been slightly simplified in VERSION
-4.0, at the same time we switched from CVS to GIT maintenance. There
-is no recommended conversion script, other than installing NEMO V4
-from scratch. The CVS tree is not maintained anymore.
+	configure   
+	make build1 build2 build3 build4
+	source nemo_start.sh
 
 It may be handy to pre-install a few libraries and packages on your
-system, if they do not exist yet, though for a few common ones
-(e.g. pgplot, gsl, hdf) we also do have some support to install them
-within the NEMO tree before NEMO is installed.
+system, if they do not exist yet. For a few common ones (e.g. pgplot,
+cfitsio, gsl, hdf, hdf5) we also do have some support to install them
+within the NEMO tree before the NEMO is installed.  Typically you can
+then use the commonly used sequence
 
-Preconditions to INSTALLATION
-=============================
+      configure --prefix=$NEMO/opt
+      make
+      make install
+or
+      mkdir build
+      cd build
+      cmake
+      -DCMAKE_INSTALL_PREFIX=$NEMO/opt ..
+      make
+      make install
 
-a1) Installing PGPLOT - native distribution
+Preconditions for INSTALLATION
+==============================
 
-   Some (linux) distributions keep pgplot in their package list. For example
-   in Ubuntu you can say
+a1) Installing PGPLOT - native Linux/MacOSX-brew distribution
+
+   Some distributions now keep pgplot in their package list. For example
+   in Ubuntu you can use
       	     sudo apt install pgplot5
    (but see below for the giza version).  In this case you can use
 
    	configure --with-yapp=pgplot --with-pgplot-prefix=/usr/lib
+
+   In Centos PGPLOT is also available
+
+             sudo yum install pgplot-devel pgplot
+
+   On MacOSX, with brew, you can
+             brew install pgplot
+
+   If you are lucky, you can also find the proper paths via pkg-config, but
+   you will need to know the package name and they can vary. 
 
 a2) Installing PGPLOT (native CALTECH version)
 
@@ -174,7 +195,9 @@ a4) Install PGPLOT (giza github installation) -
     cd $NEMO
     configure --with-yapp=pgplot --with-pgplot-prefix=$NEMO/lib
 
-b) Installing HDF (now often called HDF4, since there HDF5 is the current version)
+    My experience with this version of pgplot is not ideal yet.
+
+b1) Installing HDF4
     
    You only need the HDF library if you plan to work with the ZEUS or CMHOG 
    hydrocodes.
@@ -182,9 +205,8 @@ b) Installing HDF (now often called HDF4, since there HDF5 is the current versio
    This requires:
 	libdf.a
 	libz.a	(often comes with the system)
-	/usr/local/include/df.h   -- and many others
-   A newer version of HDF (HDF5) is currently under development. NEMO does
-   not support this yet.
+	df.h    -- and many others belonging to HDF4
+   A newer version of HDF (HDF5) is also supported, they used hdf5.h, see below.
 
    The install package for hdf4 can be found at https://support.hdfgroup.org/products/hdf4/.
    You will need to extract the package. The next command assumes you are already in HDF4 directory
@@ -193,6 +215,17 @@ b) Installing HDF (now often called HDF4, since there HDF5 is the current versio
    configure --prefix=$NEMO
    make
    make install
+
+   https://support.hdfgroup.org/ftp/HDF/releases/HDF4.2.14/src/CMake-hdf-4.2.14.tar.gz
+   https://support.hdfgroup.org/ftp/HDF/releases/HDF4.2.14/src/hdf-4.2.14.tar.gz
+
+b2) Installing HDF5
+
+
+   https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.6/src/hdf5-1.10.6.tar.gz
+
+   This version of HDF may either be installed via the system, or in $NEMO/opt.
+
 
 c) Installing CFITSIO  (pending work on configure.in)
  
@@ -213,7 +246,7 @@ c) Installing CFITSIO  (pending work on configure.in)
    If your system has FTOOLS installed, possibly via the LHEASOFT package,
    you can use their prefix, e.g.
 
-	nemo% configure --with-cfitsio-prefix=/opt/lheasoft/SunOS_5.6_sparc
+	configure --with-cfitsio-prefix=/opt/lheasoft/SunOS_5.6_sparc
 
 
 d) If you are on a system where you need to install NEMO and other packages,
@@ -222,7 +255,7 @@ d) If you are on a system where you need to install NEMO and other packages,
 
    For this a directory $NEMO/opt has also been created during the installation
    process, 
-   Under $NEMO/opt you will then find the usual /usr/local hiearchy:
+   Under $NEMO/opt you will then find the usual /usr/local hierarchy:
 	bin	
 	include	
 	info		
@@ -233,145 +266,23 @@ d) If you are on a system where you need to install NEMO and other packages,
 
 	gsl:		configure --prefix=$NEMO
 	hdf ?
+	hdf5            	
 	pgplot ?
 	cfitsio		configure --prefix=$NEMO
 	plplot
 	gcc
 
-   most of these use GNU autoconf and can be installed in the NEMO hierarchy with
-   the commands
-
-	configure ....
-	make
-	make install
-
-   and won't need root permission anymore if $NEMO/opt is used
-
    NEMO can then use these packages as follows:
 
-	configure --with-gsl-prefix=$NEMO
+	configure --with-gsl-prefix=$NEMO/opt
 	configure --enable-gsl
 	configure --disable-gsl		(the default)
 
 
 
-Brief overview of a Version 4.x INSTALLATION  
-============================================
+Some old notes
+==============
 
-
-1) Obtain the source code via git or a versioned tar files.  We keep several versions in ftp.astro.umd.edu:/progs/nemo
-
-
-        % gzip -cd nemo_VERSION.tar.gz | tar xf -
-
-   or more compact:
-
-	% gtar -zxf nemo_VERSION.tar.gz
-
-   and now change directory to the newly made "nemo" directory:
-
-	% cd nemo_VERSION
-
-   (VERSION could be e.g. "3.2.4" or better yet, "cvs")
-
-2) Run configure and install the basic NEMO libraries:
-
-	% ./configure  [options]
-		(sometimes you may need to set your default compiler, e.g.
-			setenv F77 gfortran (or use export for bash)
-		 or whichever is applicable, if the fortran compiler does not
-		 get detected properly, the run configure again)
-		 Check the file config.log if configure fails
-	% source nemo_start.csh
-	% make postconfig
-	% rehash
-	% make libs
-
-
-3) Run the testsuite, which also installs a pretty basic set of NEMO executables:
-
-	%  setenv YAPP /vps		## the default /xs,  requires you to be in X
-	%  src/scripts/testsuite -b	# run test testsuite
-
-
-   Study the output of the lines that do not contain the word 'OK' at the end, e.g.
-
-Working on /home/teuben/nemo_3.0.4/src/image/fits OK
-Working on /home/teuben/nemo_3.0.4/src/image/io OK
-Working on /home/teuben/nemo_3.0.4/src/image/misc OK
-Working on /home/teuben/nemo_3.0.4/src/image/trans OK
-Working on /home/teuben/nemo_3.0.4/src/kernel/fortran OK
-Working on /home/teuben/nemo_3.0.4/src/kernel/io OK
-Working on /home/teuben/nemo_3.0.4/src/kernel/misc OK
-Working on /home/teuben/nemo_3.0.4/src/kernel/tab Problems			<<------
-Working on /home/teuben/nemo_3.0.4/src/nbody/cores OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/evolve/aarseth/nbody0 Problems	<<------
-Working on /home/teuben/nemo_3.0.4/src/nbody/evolve/aarseth/tools OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/evolve/hackcode/hackcode1 OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/evolve/scfm OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/image OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/init OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/io OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/io/starlab OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/reduc OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/trans OK
-Working on /home/teuben/nemo_3.0.4/src/nbody/xyz OK
-Working on /home/teuben/nemo_3.0.4/src/orbit/potential Problems			<<------
-Results in /home/teuben/nemo_3.0.4/tmp/test22005/testsuite.log
-
-
-*) Installing PGPLOT within NEMO is a bit cumbersome, but not
-   impossible. The following sessions assumes you have an official
-   tar release from the Caltech site ftp://astro.caltech.edu/pub/pgplot
-
-     ** actually this is now the default, and unless you want to work
-	on a system where you have guaranteed access to PGPLOT via 
-	another package,e.g. miriad, you can borrow that version.
-	In practice i've found this to cause confusion.
-
-	% ./configure F77=/opt/f77 CC=/opt/cc     (F77= and CC= optional)
-	% source nemo_start
-	% make dirs 
-	% make config_clean				<==
-	% src/scripts/pgplot.install dir=/tmp		<==
-	% ./configure --with-pgplot-prefix=$NEMOLIB --with-yapp=pgplot
-	% make dirs config_extra scripts
-	% rehash
-	% make libs
-
-   Or if you want to use our (not TJP blessed) PGPLOT cvs release 
-
-	% ./configure 
-	% source nemo_start.csh
-	% make dirs 
-	% make config_clean				<==
-        % cd $NEMO/local
-	% cvs co pgplot					<== cvs.astro.umd.edu
-	% cd $NEMO
-	% src/scripts/pgplot.install dir=$NEMO/tmp	<== our install
-	% ./configure --with-pgplot-prefix=$NEMOLIB --with-yapp=pgplot
-	% make dirs config_extra scripts
-	% source NEMORC.local
-	% rehash
-	% make libs
-	
-
-*) Installation problems:
-
-	- edit *.in
-		make config config_extra
-		
-	- edit NEMORC.local (came from NEMORC.gen.in)
-		source NEMORC.local
-
-	- edit $NEMOLIB/makedefs (but danger, configure/config_extra can 
-	  overwrite this)
-
-	- if 'configure' fails for some reason, check the config.log file. 
-	  Sometimes the cause is a rather trivial one, e.g. missing licences 
-	  or a bad path or even a bad shell
-
-	- on occasion the sellwood/tools test will hang.
 
 *) pieces of configure out of date?  Encountering a new machine?
 
@@ -426,157 +337,5 @@ Results in /home/teuben/nemo_3.0.4/tmp/test22005/testsuite.log
 	--with-gsl-prefix=PFX
 		--enable-gsl
 		--disable-gsl		(the default)
-
-
-* Configuration options that we are working on:
-
-	LAM/MPI: lam-6.3.1-4.i386.rpm 
-
-	PVM:	 pvm-3.4.3-4.i386.rpm  pvm-gui-3.4.3-4.i386.rpm
-	   needs  env.var   PVM_ROOT=/usr/share/pvm3/
-		            PVM_ARCH=LINUX
-
-
-3) Running a small test of tests to see if everything works fine
-
- 	src/scripts/testsuite
-
-*** TODO:
-
-     	- more consistent way between usage of variables in the NEMORC chain, 
-	  and the 'makedefs' list.
-
-
-
-Darwin:  a few minor patches needed:
-
-1) -ldl does not exist, but with FINK you can install proj/dlcompat, e.g.
-
-cd $NEMO/local
-cvs -d :pserver:anonymous@anoncvs.opendarwin.org:/cvs/od login
-cvs -d :pserver:anonymous@anoncvs.opendarwin.org:/cvs/od co -d dlcompat proj/dlcompat
-cd dlcompat
-autoconf
-configure --prefix=$NEMO/opt/$NEMOHOST
-make
-make install
-
-2) in $NEMOLIB/makedefs 
- 
-  a) remove "-lcrt1.o -lcrtbegin.o" to FLIBS 
-  b) add -lcc_dynamic to NEMO_LIBS and NEMO_LIBSPP
-
-in some subsequent release these will be automatically taken care of..
-
-RE-INSTALLING NEMO
-==================
-
-Sometimes the compiler or operating system has changed under your feet, and
-due to their use of shared libraries NEMO has stopped working. You can
-re-install it from scratch, or use something like the following set
-of commands on the current source tree:
-
-     cd $NEMO
-     make config_clean
-     ./configure --with-yapp=pgplot --with-pgplot-prefix=$NEMOLIB
-     make postconfig 
-     source NEMORC.local 
-     make libs                   # make new library
-     make pgplot                 # probably need a new pgplot too
-     make vogl                   # GL library for xyz programs
-     mknemo tsf tabhist          # just to test if it's all looking good
-     make bins                   # go for all of them
-     src/scripts/testsuite       # run the testsuite if all was well
-
-Possible problems are a changed, compiler, in which case forcing this by
-setting the CC, CXX and F77 environment variables may help and restart
-the sequence.
-  
-     setenv CC   /usr/bin/gcc
-     setenv CXX  /usr/bin/g++
-     setenv CC   /usr/bin/gcc
-
-
-SUPPORTED ARCHITECTURES:
-========================
-
-linux	gcc/g77 (gnu compiler)		ok
-linux	gcc/gfortran (gnu compiler V4)	ok
-linux	icc/ifort (intel 8.x and 9.x)	ok
-sol8	gcc/g77				ok
-sol8	cc/f77				some f2c problems
-darwin	gcc/g77				ok, but some casename problems
-darwin  cc/f77 (ibm compiler)           ?
-
-* Known configurations to work:
-
-	    NEMOHOST			"uname -a" for the machine that worked
-
-	mips-sgi-irix6.5	IRIX64 sulfur 6.5 01101245 IP27
-	i686-pc-linux-gnu	Linux nemo 2.2.14-5.0 #1 Tue Mar 7 21:07:39 EST 2000 i686 unknown
-	sparc-sun-solaris2.6	SunOS atlas 5.6 Generic_105181-20 sun4u sparc SUNW,Ultra-5_10
-	sparc-sun-solaris2.7
-	sparc-sun-solaris2.8
-
-
-	sulfur SGI: needs
-		setenv F77 f90
-	or		   g77
-
-
-Mac OS 10.3 notes: (28-mar-2004)
-==================
-
-
-Example install: (assuming CVSROOT has been set)
-
-	cvs co -r NemoHost3 -d nemo32 nemo
-	cd nemo32
-	(mkdir local; cd local; cvs -Q co pgplot)
-	setenv CC gcc			<-- just to make sure
-	setenv F77 g77			<-- just to make sure
-	source nemo_end			<-- just to make sure...
-	./configure --with-yapp=pgplot --with-pgplot-prefix=`pwd`/lib
-	source nemo_start
-	make postconfig
-	rehash
-	
-	edit $NEMOLIB/makedefs		<-- remove -lcrt1.o and -lcrt2.o from FLIBS
-	edit NEMORC.local		<-- <same> from YAPPLIB
-
-	source NEMORC.local
-
-	make pgplot			<-- create internal pgplot (some errors occur,but won't interfere with NEMO)
-	make libs
-	src/scripts/nemo.vogl
-	src/scripts/testsuite -b
-
-	mkspiral s000 1000000 nmodel=40		<--- makes a huge file, > 2GB, for testing big file I/O
-
-
-	<< there are some problems left, but mostly due to Makefiles that didn't
-	   know they had to add the -lcc_dynamic
-
-
--- maintenance:
-
-before the 
-	
-	cd $NEMO
-	src/scripts/version inc			
-  or
-	src/scripts/version set 4.0.1		
-
-  then make a tar ball
-
-	make targit
-
-  which makes nemo_4.0.1.tar.gz
-
-	make stamp
-
-  which stamps your local adm/Chkfile such that 'make new' works
-
-
 
 

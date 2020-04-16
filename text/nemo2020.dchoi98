@@ -1,0 +1,44 @@
+Student progress
+
+
+Galaxy Model Making
+-------------------
+
+
+For many codes we can start search on ascl.net, but making galaxy
+models is a special (almost black) art which deserves some caution
+depending on the nbody code one uses
+
+In NEMO we have these codes
+
+    mkdisk
+    mkexpdisk
+    magalie     - need a paper reference -
+    mkkd95      (GalactICS) - ascl:1109.011
+
+Papers:
+
+  Made-to-measure modelling of observed galaxy dynamics
+  Jo Bovy, Daisuke Kawata, Jason A. S. Hunt
+
+  PRIMAL  (Hunt et al)
+
+  NMAGIC
+
+  Syer & Tremaine  2009
+  https://ui.adsabs.harvard.edu/abs/1996MNRAS.282..223S/abstract
+
+
+GalIC
+  https://ascl.net/1408.008
+  $NEMO/usr/galic
+
+
+
+gadget2 ascl:0003.001
+  https://ascl.net/0003.001
+  $NEMO/usr/gadget
+
+  Has initial conditions in the ICs directory in gadget2, see
+      'man 5 gadget'
+  for examples.

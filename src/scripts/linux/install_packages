@@ -1,0 +1,16 @@
+#! /usr/bin/env bash
+#
+# ubuntu:       apt install $(./install_packages ubuntu18.04)
+# centos:       yum install
+# fedora:       dnf install
+# arch:         pacman -S
+# manjaro;      pacman -S
+# openSUSE:     zypper install
+
+
+#
+list=$1
+
+for p in $(grep -v ^# $list); do
+  echo $p
+done

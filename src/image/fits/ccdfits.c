@@ -42,6 +42,8 @@
  *      26-may-16   5.8  added CUNITn and BUNIT, and better WCS output when radecvel=t
  *       6-apr-17   5.9  allow refmap to update only certain WCS (1,2,3)     PJT
  *       8-apr-17   6.0  new approach inheriting a new WCS
+ *      14-jun-19   6.0a correct VSYS when in freq=t mode, fix cdelt1 in one common case
+ *      19-jun-10   6.1  Output now in km/s
  *
  *  TODO:
  *      reference mapping has not been well tested, especially for 2D
@@ -78,14 +80,15 @@ string defv[] = {
 	"cdelt=\n        pixel value increment, if different from default",
 	"radecvel=f\n    Enforce reasonable RA/DEC/VEL axis descriptor",
 	"proj=SIN\n      Projection type if RA/DEC used (SIN,TAN)",
-	"restfreq=115271204000\n   RESTFRQ (in Hz) if a doppler axis is used",
-	"vsys=0\n        VSYS correction (test)",
-	"freq=f\n        Output axis in FREQ or VHEL",
+	"restfreq=115271204000\n   RESTFRQ (in Hz) if a doppler axis is used",  /* 1.420405751786 */
+	"vsys=0\n        VSYS correction in km/s",
+	"freq=f\n        Output axis in FREQ or VEL",
 	"dummy=t\n       Write dummy axes also ?",
 	"nfill=0\n	 Add some dummy comment cards to test fitsio",
 	"ndim=\n         Testing if only that many dimensions need to be written",
 	"select=1\n      Which image (if more than 1 present, 1=first) to select",
-        "VERSION=5.9c\n  20-feb-2018 PJT",
+	"blank=\n        If set, use this is the BLANK value in FITS (usual NaN)",
+        "VERSION=6.2\n   1-aug-2019 PJT",
         NULL,
 };
 
@@ -104,12 +107,14 @@ string object;           /* name of object in FITS header */
 string comment;          /* extra comments */
 string headline;         /* optional NEMO headline, added as COMMENT */
 string proj;             /* projection type for WCS */
-bool Qcdmatrix;         /* writing out new-style cdmatrix ? */
-bool Qradecvel;         /* fake astronomy WCS header */
+bool Qcdmatrix;          /* writing out new-style cdmatrix ? */
+bool Qradecvel;          /* fake astronomy WCS header */
 bool Qfreq;              /* freq or vel output ? */
 bool Qrefmap;
 bool Qcrval, Qcdelt, Qcrpix;
-bool Qdummy;            /* write dummy axes ? */
+bool Qdummy;             /* write dummy axes ? */
+bool Qblank;
+real blankval;
 int  nrefaxis, refaxis[4];
 bool Qrefaxis[4];
 
@@ -173,6 +178,8 @@ void setparams(void)
   Qcdmatrix = getbparam("cdmatrix");
   Qradecvel = getbparam("radecvel");
   Qfreq     = getbparam("freq");
+  Qblank    = hasvalue("blank");
+  if (Qblank) blankval = getrparam("blank");
 
   
   Qrefmap = hasvalue("refmap");
@@ -223,6 +230,7 @@ void write_fits(string name,imageptr iptr)
 {
     FLOAT tmpr,xmin[4],xref[4],dx[4],mapmin,mapmax;   /* fitsio FLOAT !!! */
     FLOAT bmaj,bmin,bpa;
+    FLOAT fnan;
     FITS *fitsfile;
     char *cp, origin[80];
     char *ctype1_name, *ctype2_name, *ctype3_name, *ctype4_name;
@@ -230,6 +238,11 @@ void write_fits(string name,imageptr iptr)
     float *buffer, *bp;
     int i, j, k, axistype, bitpix, keepaxis[4], nx[4], p[4], nx_out[4], ndim=3;
     double bscale, bzero;
+
+    get_nanf(&fnan);    
+
+    if (Qfreq)
+      vsys = -restfreq * vsys / 300000.0;        // convert km/s to Hz
     
     if (hasvalue("ndim")) ndim = getiparam("ndim");
     nx[0] = Nx(iptr);
@@ -238,7 +251,7 @@ void write_fits(string name,imageptr iptr)
     nx[3] = 1;
     xmin[0] = Xmin(iptr)*scale[0];
     xmin[1] = Ymin(iptr)*scale[1];
-    xmin[2] = (Zmin(iptr)+vsys)*scale[2];
+    xmin[2] = Zmin(iptr)*scale[2];
     xmin[3] = 1.0;
     dx[0] = Dx(iptr)*scale[0];
     dx[1] = Dy(iptr)*scale[1];
@@ -326,7 +339,9 @@ void write_fits(string name,imageptr iptr)
       dprintf(1,"Using ref_crval\n");
       fitwrhdr(fitsfile,"CRVAL1",ref_crval[0]);
       fitwrhdr(fitsfile,"CRVAL2",ref_crval[1]);
-      if (ndim>2) fitwrhdr(fitsfile,"CRVAL3",ref_crval[2]);
+      if (ndim>2) {
+	fitwrhdr(fitsfile,"CRVAL3",ref_crval[2]+vsys);
+      }
       if (ndim>3) fitwrhdr(fitsfile,"CRVAL4",ref_crval[3]);
     } else {
       fitwrhdr(fitsfile,"CRVAL1",xmin[p[0]]);
@@ -347,9 +362,14 @@ void write_fits(string name,imageptr iptr)
 	if (ndim>2) fitwrhdr(fitsfile,"CDELT3",ref_cdelt[2]*scale[2]);
 	if (ndim>3) fitwrhdr(fitsfile,"CDELT4",1.0);
       } else {
-	fitwrhdr(fitsfile,"CDELT1",dx[p[0]]);    
+	fitwrhdr(fitsfile,"CDELT1",-dx[p[0]]);    
 	fitwrhdr(fitsfile,"CDELT2",dx[p[1]]);    
-	if (ndim>2) fitwrhdr(fitsfile,"CDELT3",dx[p[2]]);
+	if (ndim>2) {
+	  if (Qfreq)
+	    fitwrhdr(fitsfile,"CDELT3",-dx[p[2]]);
+	  else
+	    fitwrhdr(fitsfile,"CDELT3",dx[p[2]]);
+	}
 	if (ndim>3) fitwrhdr(fitsfile,"CDELT4",1.0);
       }
     }
@@ -383,7 +403,7 @@ void write_fits(string name,imageptr iptr)
       if (Qfreq)
 	fitwrhda(fitsfile,"CUNIT3","Hz");
       else
-	fitwrhda(fitsfile,"CUNIT3","m/s");            /* or km/s */
+	fitwrhda(fitsfile,"CUNIT3","km/s");            /* or km/s */
       fitwrhda(fitsfile,"CUNIT4","");
       if (bmaj > 0.0)
 	fitwrhda(fitsfile,"BUNIT","JY/BEAM");
@@ -448,8 +468,12 @@ void write_fits(string name,imageptr iptr)
     for (k=0; k<nx_out[2]; k++) {          /* loop over all planes */
         fitsetpl(fitsfile,1,&k);
         for (j=0; j<nx_out[1]; j++) {      /* loop over all rows */
-            for (i=0, bp=buffer; i<nx_out[0]; i++, bp++)
-                *bp =  iscale[0] * CubeValue(iptr,i,j,k) + iscale[1];
+ 	  for (i=0, bp=buffer; i<nx_out[0]; i++, bp++) {
+	    if (Qblank && CubeValue(iptr,i,j,k) == blankval)
+	      *bp = fnan;
+	    else
+	      *bp =  iscale[0] * CubeValue(iptr,i,j,k) + iscale[1];
+	  }
             fitwrite(fitsfile,j,buffer);
         }
     }

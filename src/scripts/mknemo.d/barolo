@@ -1,0 +1,52 @@
+#! /bin/bash
+#
+#   mknemo build helper for BBarolo (ok, I call it barolo here)
+#
+#
+#   See also:  https://bbarolo.readthedocs.io/en/latest/
+#
+#
+# Unless you have obtained the 3 needed libraries via other means, you'll need
+# to grab them, and install them manually.   E.g.
+# 
+#   wget  ftp://ftp.atnf.csiro.au/pub/software/wcslib/wcslib.tar.bz2
+#   wget  http://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio_latest.tar.gz
+#   wget  http://www.fftw.org/fftw-3.3.8.tar.gz
+#
+# Luckily all 3 install with with the usual 3 finger salute:
+#
+#    ./configure --prefix=$NEMO/opt
+#    make
+#    make install
+#
+# They are now installed via 'mknemo' as well.
+#
+# An example of package install for Ubuntu: (actually not checked yet)
+#
+#    sudo apt install wcslib-dev libcfitsio-dev libfftw3-dev
+#
+
+cd $NEMO/local
+
+echo "Make sure you have installed (via mknemo or otherwise): wcslib cfitsio fftw"
+
+if [ ! -e $NEMO/opt/include/wclib ]; then
+   mknemo wcslib
+fi
+
+if [ ! -e $NEMO/opt/include/fitsio.h ]; then
+   mknemo cfitsio
+fi
+
+if [ ! -e $NEMO/opt/include/fftw3.h ]; then
+   mknemo fftw
+fi
+
+if [ ! -d Bbarolo ]; then
+  git clone https://github.com/editeodoro/Bbarolo
+fi
+cd Bbarolo
+git pull
+./configure --prefix=$NEMO/opt --with-cfitsio=$NEMO/opt --with-wcslib=$NEMO/opt --with-fftw3=$NEMO/opt
+make 
+make install

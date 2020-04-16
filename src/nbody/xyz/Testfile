@@ -19,18 +19,25 @@ all:	snap.in $(BIN)
 snap.in:
 	@echo Creating snap.in
 	$(EXEC) mkplummer snap.in $(NBODY) seed=123
+	@bsf snap.in '0.0140845 0.896875 -4.6523 4.80925 71'
 
 snapxyz: snap.in
 	@echo Running $*
 	$(EXEC) snapxyz snap.in -  color=i | $(EXEC) tsf -  ; nemo.coverage snapxyz.c
+	@snapxyz snap.in -  color=i | bsf - '1.04652e-17 0.966872 -4.6523 4.80925 61' label=snapxyz
 
 p64.out:
 	$(EXEC) mkplummer p64.a $(NBODY) seed=123
 	$(EXEC) mkplummer p64.b $(NBODY) seed=321
 	$(EXEC) snapstack p64.a p64.b p64.in deltar=6,0,0 deltav=-1,0,0
 	$(EXEC) hackcode1 p64.in p64.out seed=123 tstop=16 freqout=8 fcells=4 > /dev/null
+	@bsf p64.in
+	@bsf p64.out
+	
 p64.xyz:
 	$(EXEC) snapxyz p64.out p64.xyz ; nemo.coverage snapxyz.c
+	@bsf p64.xyz
+
 xyzview:  p64.out p64.xyz
 	@echo Running $*
 	$(EXEC) xyzview p64.xyz scale=10 maxframe=160

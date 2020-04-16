@@ -42,13 +42,13 @@ string defv[] = {
     "vy=\n                y-",
     "vz=\n                z-",
     "etot=\n		  total energy (ekin+epot)",
-    "lz=\n		  angular momentum in z (**ignored**)",
+    "lz=\n		  sign of angular momentum in z",
     "time=0.0\n           time",
     "potname=\n		  optional potential(5NEMO)",
     "potpars=\n		  .. with optional parameters",
     "potfile=\n		  .. and optional datafile name",
     "headline=\n          random verbiage",
-    "VERSION=4.2\n        24-jul-2013 PJT",
+    "VERSION=4.4\n        10-dec-2019 PJT",
     NULL,
 };
 
@@ -64,18 +64,19 @@ a_potential p;
 double x,y,z,u,v,w;
 double etot, lz;
 double tnow, omega;
+double acc[3],epot;
 
 int  Dpos, Dvel;
 
-void setparams();
+void setparams(void);
 
-void nemo_main ()
+void nemo_main (void)
 {
   setparams();	/* get cmdline stuff and compute x,y,u,v,etot,lz */
 
   optr = NULL;				/* make an orbit */
   allocate_orbit (&optr, 3, 1);
-  Masso(optr)  = 1.0;                     /* and set Mass */
+  Masso(optr)  = 1.0;                   /* and set Mass */
   Key(optr) = 0;
   Torb(optr,0) = tnow;
   Xorb(optr,0) = x;			/* .. positions */
@@ -84,6 +85,12 @@ void nemo_main ()
   Uorb(optr,0) = u;			/* .. velocities */
   Vorb(optr,0) = v;
   Worb(optr,0) = w;
+#ifdef ORBIT_PHI  
+  Porb(optr,0)  = epot;
+  AXorb(optr,0) = acc[0];
+  AYorb(optr,0) = acc[1];
+  AZorb(optr,0) = acc[2];
+#endif    
   I1(optr) = etot;			/*  energy (zero if not used) */
   I2(optr) = lz;                          /* angular momentum */
   
@@ -99,10 +106,10 @@ void nemo_main ()
   strclose(outstr);
 }
 
-void setparams()
+void setparams(void)
 {
     potproc_double pot;
-    double pos[3],acc[3],epot,vel2,per;
+    double pos[3],vel2,per;
     int ndim=3;
     int signcount;
     int lzsign;
@@ -142,12 +149,14 @@ void setparams()
       signcount++;
     }
     if (signcount > 1) error("Can only set one of vx,vy,vz to + or -");
-    tnow = getdparam("time");
+    dprintf(1,"Dpos=%d Dvel=%d\n",Dpos,Dvel);
     
+    tnow = getdparam("time");
 
     outfile = getparam("out");
-    if(hasvalue("etot")) {	  /* energy given; calculate missing vx or vy */
+    if(hasvalue("etot")) {	  /* energy given; calculate missing vx (for y) or vy (for x) */      
  	   etot = getdparam("etot");
+	   dprintf(1,"etot=%g\n", etot);
            if(!hasvalue("potname"))
               error("No potential given (potname=)");
 	   pot = get_potential_double(p.name, p.pars, p.file);
@@ -161,42 +170,39 @@ void setparams()
 	   } else
 	     lz = 0;
 
-	   /* allow only u or v missing for now */
-	   /* if x or y not given, 0.0 will be taken */
+	   /* launching orbit is perpendicular to the axis for which X or Y is given */
 
 	   pos[0] = x = getdparam("x");
 	   pos[1] = y = getdparam("y");
 	   pos[2] = z = 0.0;			/* force z=0 if E_tot given */
 	   (*pot)(&ndim,pos,acc,&epot,&tnow);
+	   dprintf(1,"acc: %g %g %g \n", acc[0],acc[1],acc[2]);
 	   epot -= 0.5*omega*omega*(x*x+y*y);
 
-           if(!hasvalue("vx")) {                /* vx missing */
+           if(hasvalue("y")) {                /* vx missing */
 		v = getdparam("vy");
 		u = 2*(etot-epot) - v*v;
 		if (u<0.0)
-			error("vy too large for this energy: epot=%g vy(max)=%g\n",
-					epot,2*sqrt(etot-epot));
+		  error("vy too large for this energy: epot=%g vy(max)=%g\n",
+			epot,2*sqrt(etot-epot));
 		else
-			u = sqrt(u);
+		  u = sqrt(u);
 		lz = x*v-y*u;	
-		if(lzsign<0 && lz>0) u = -u;     /* switch rotation */
-	   } else {
-                if(hasvalue("vy"))
-			error("cannot give e=,  vx= and vy= at the same time");
+		if(lzsign != SGN(lz)) u = -u;     /* switch rotation */
+	   } else if(hasvalue("x")) {
 		u = getdparam("vx");
 		v = 2*(etot-epot) - u*u;
 		if (v<0.0)
-			error("vx too large for this energy: epot=%g vx(max)=%g\n",
+		  error("vx too large for this energy: epot=%g vx(max)=%g\n",
 					epot,2*sqrt(etot-epot));
 		else
-			v = sqrt(v);
+		  v = sqrt(v);
 		lz = x*v-y*u;	
-		if(lzsign<0 && lz>0) v = -v;     /* switch rotation */
+		if(lzsign != SGN(lz)) v = -v;     /* switch rotation */
 	   }
 	   w = 0.0;
            lz = x*v-y*u;
     } else {
-	   if(hasvalue("etot")) warning("Initial value for etot= not used");
 	   if(hasvalue("lz")) warning("Initial value for lz= not used");
 	   x = getdparam("x");			
 	   y = getdparam("y");
@@ -218,6 +224,7 @@ void setparams()
 	          pos[1] = y;
 	          pos[2] = z;
 	          (*pot)(&ndim,pos,acc,&epot,&tnow);
+		  dprintf(1,"acc: %g %g %g \n", acc[0],acc[1],acc[2]);
 		  if (Dvel==0) {
 		    error("Dvel=0 not implemented");
 		  } else if (Dvel==1) {

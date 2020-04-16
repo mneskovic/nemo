@@ -16,41 +16,50 @@
  *  11-apr-95    V3.1b no more ARGS, included more header files here
  *   1-mar-03    V3.3  added iom_err, errors in the integrals of motion
  *  25-jul-13    V4.0  added Key
+ *  10-dec-2019  V4.1  added optional PHI and ACC (for BOOM)
  */
 
 #include <filestruct.h>
 #include <potential.h>
 #include <history.h>
 
+#define ORBIT_PHI
+
 typedef struct {
-        int   ndim;
-        int   coordsys;
-	int   size;
-        real  mass;
-        real  *iom;
-        real  *iom_err;
-        int   key;
-        int   nsteps;
-        int   maxsteps;
-        real  *time;
-        real  *phase;
-	a_potential pot;
+        int     _ndim;
+        int     _coordsys;
+	int     _size;
+        real    _mass;
+        realptr _iom;
+        realptr _iom_err;
+        int     _key;
+        int     _nsteps;
+        int     _maxsteps;
+        realptr _time;
+        realptr _phase;
+#ifdef ORBIT_PHI
+        realptr _phi;
+        realptr _acc;
+#endif  
+	a_potential _pot;
 } orbit, *orbitptr;
 
-#define Ndim(optr)      ((optr)->ndim)
-#define CoordSys(optr)  ((optr)->coordsys)
-#define Size(optr)      ((optr)->size)
-#define Masso(optr)     ((optr)->mass)
-#define Key(optr)       ((optr)->key)
-#define IOM(optr)       ((optr)->iom)
-#define IOMERR(optr)    ((optr)->iom_err)
-#define Nsteps(optr)    ((optr)->nsteps)
-#define MAXsteps(optr)  ((optr)->maxsteps)
-#define TimePath(optr)  ((optr)->time)
-#define PhasePath(optr) ((optr)->phase)
-#define PosPath(optr)   ((optr)->phase)
-#define VelPath(optr)   ((optr)->phase+Ndim(optr))
-#define Potential(optr) ((optr)->pot)
+#define Ndim(optr)      ((optr)->_ndim)
+#define CoordSys(optr)  ((optr)->_coordsys)
+#define Size(optr)      ((optr)->_size)
+#define Masso(optr)     ((optr)->_mass)
+#define Key(optr)       ((optr)->_key)
+#define IOM(optr)       ((optr)->_iom)
+#define IOMERR(optr)    ((optr)->_iom_err)
+#define Nsteps(optr)    ((optr)->_nsteps)
+#define MAXsteps(optr)  ((optr)->_maxsteps)
+#define TimePath(optr)  ((optr)->_time)
+#define PhasePath(optr) ((optr)->_phase)
+#define PosPath(optr)   ((optr)->_phase)
+#define VelPath(optr)   ((optr)->_phase+Ndim(optr))
+#define PhiPath(optr)   ((optr)->_phi)
+#define AccPath(optr)   ((optr)->_acc)
+#define Potential(optr) ((optr)->_pot)
 
 /*      a few dangerous (does not check for ndim) access functions */
 
@@ -79,6 +88,10 @@ typedef struct {
 #define Uorb(optr,i)    (*(PhasePath(optr)+Ndim(optr)*2*(i)+Ndim(optr)))
 #define Vorb(optr,i)    (*(PhasePath(optr)+Ndim(optr)*2*(i)+Ndim(optr)+1))
 #define Worb(optr,i)    (*(PhasePath(optr)+Ndim(optr)*2*(i)+Ndim(optr)+2))
+#define Porb(optr,i)    (*(PhiPath(optr)+(i)))
+#define AXorb(optr,i)   (*(AccPath(optr)+Ndim(optr)*(i)))
+#define AYorb(optr,i)   (*(AccPath(optr)+Ndim(optr)*(i)+1))
+#define AZorb(optr,i)   (*(AccPath(optr)+Ndim(optr)*(i)+2))
 
 #define PotName(optr)   (Potential(optr).name)
 #define PotPars(optr)   (Potential(optr).pars)
@@ -108,6 +121,8 @@ typedef struct {
 #define     PhasePathTag        "PhasePath"
 #define     PosPathTag          "PosPath"
 #define     VelPathTag          "VelPath"
+#define     PhiPathTag          "PhiPath"
+#define     AccPathTag          "AccPath"
 
 
 

@@ -1,0 +1,42 @@
+#! /bin/bash
+#
+# The build procedure for debian flavors The I use is as follows:
+# - run this script, it will create a astronemo_VERSION_ARCH.deb file
+# 
+# Examples:     "glnemo2 1.11.0-1.ubuntu18.04" and "amd64"
+# 
+
+NEMO=nemo_4.2
+ARCH=amd64
+
+#
+debname=astro${NEMO}_${ARCH}
+echo Starting with a clean $debname
+rm -rf $debname
+mkdir $debname
+cd $debname
+
+#
+mkdir opt
+git clone https://github.com/teuben/nemo opt/$NEMO
+cp -a opt/$NEMO/src/scripts/DEBIAN .
+#
+cd opt/$NEMO
+echo configure ...
+./configure --with-yapp=pgplot   > install.config.log  2>&1
+echo build ... 
+make build                       > install.build.log   2>&1
+
+#
+cd ../../..
+dpkg-deb --build $debname
+# fakeroot dpkg-deb --build $debname
+#
+#
+
+echo Now issue: sudo dpkg --install $debname.deb
+
+# lsb_release -i
+# lsb_release -r
+# uname -p        ->  x86_64
+# amd64

@@ -1,0 +1,117 @@
+<HTML>
+<!-- A comment -->
+<HEAD>
+<TITLE> NEMO FAQ </TITLE>
+</HEAD>
+
+<BODY>
+<CENTER>
+<H1>	Frequently Asked Questions </H1>
+</CENTER>
+
+
+<H1> Using NEMO </H1>
+<OL>
+
+  <LI> <b> I get "command not found" for all NEMO commands </b>
+    <br>
+
+    There are two possible causes:
+    <br>
+    If <b>all</b> commands fails, for
+    example <b>mkplummer</b>, the NEMO environment was not added to your shell.
+    So  most likely you need to <b>source</b> the <b>nemo_start.sh</b> file,
+    for example
+    <pre>
+      source /opt/nemo/nemo_start.sh
+    </pre>
+    If your case is a less common command, you <i>might</i> be able to install
+    this on-the-fly with the <b>mknemo</b> command, for example
+    <pre>
+      mknemo mktt72
+    </pre>
+    would (re)compile the <b>mktt72</b> command
+      
+    <br>
+    <br>
+    
+<LI> <b> Help, how do I get help </b>
+<br>
+Most NEMO programs have (standard unix) manual pages, but each program
+can also describe itself using the help= system keyword. And there
+is of course the web
+<pre>
+    % man programs
+    % man index
+    % man snapplot				(or whatever program)
+    % ghostview $NEMO/text/manuals/nemo.ps
+    % tsf help=					(or whatever program)
+    % tsf help=\?				(or whatever program)
+    % http://www.astro.umd.edu/nemo
+    % mailto:nemo@astro.umd.edu
+<LI>
+</OL>
+<H1> Installing NEMO </H1>
+
+<OL>
+  <LI> <b> How do I install NEMO </b>
+    <br>
+  Of course there are many variations, but the following commands should get you
+  something basic:
+  <pre>
+    git clone https://github.com/teuben/nemo
+    cd nemo
+    ./configure
+    make build
+    make check
+    make bench
+    source nemo_start.sh
+  </pre>
+  the script <b>$NEMO/docs/install_nemo.sh</b> has many options to set up some more advanced installations.
+  
+<LI> <b> I have an installation of nemo which, for some reason, I want
+to re-compile with a version of gcc which is not in the standard 
+path. How can I do this? Can I avoid re-installing nemo from
+scratch?</b>
+<br>
+TBD
+
+</OL>
+<H1> Programming NEMO </H1>
+<OL>
+<LI> <b> Compiling and adding a "standard" program </b>
+<br>
+<pre>
+    % cd $NEMO/src/.....        (choose some reasonable place)
+    % edit program.c
+    % bake program          	(local build)
+or
+    % mknemo program        	(compiles and copies to $NEMOBIN)
+</pre>
+<LI> <b> Adding something new (but "standard") to the library </b>
+<pre>
+    % cd $NEMO/src/.....        (choose some reasonable place)
+    % edit Makefile             (add the .o file to the object list)
+    % make install              (compile and put in $NEMOLIB/libnemo.a)
+</pre>
+<LI>
+</OL>
+
+<pre>
+
+Q:is there a noclobber option:
+A:no, error=1 could help, but bad idea probably
+</pre>
+
+<hr>
+<P>
+This page was last modified on
+<!--#config timefmt="%d-%h-%Y" -->
+<!--#echo var="LAST_MODIFIED" -->
+by <A HREF=mailto:teuben@astro.umd.edu>teuben@astro.umd.edu</A>.
+
+
+</BODY>
+
+</HTML>
+

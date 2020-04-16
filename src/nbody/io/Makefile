@@ -16,6 +16,7 @@ OBJFILES = snapserial.o
 SRCDIR = $(NEMO)/src/nbody/io
 SUBDIRS= gadget
 BINFILES = atos atos_sp atosph atosph_sp stoa stoa_sp tabtos \
+	   eaglesnap \
 	   rvsnap snaprv snaptipsy tipsysnap \
 	   gadgetsnap snapgadget binsnap
 
@@ -116,3 +117,12 @@ snaptipsy: snaptipsy.c
 
 tipsysnap: tipsysnap.c
 	$(CC) $(CFLAGS) -o tipsysnap tipsysnap.c  $(NEMO_LIBS)
+
+# This needs:  (cd $NEMO/usr/eagle; make install)
+# @todo  this needs to be done  via configure
+#        the current HDF5_LIB and HDF5_INC are not good enough
+#H_FLAGS = `pkg-config --cflags hdf5`
+#H_LIBS  = `pkg-config --libs hdf5`
+
+eaglesnap: eaglesnap.c
+	$(CC) $(CFLAGS) $(HDF5_INC) -o eaglesnap eaglesnap.c -lread_eagle $(HDF5_LIB) $(NEMO_LIBS)

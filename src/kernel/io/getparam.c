@@ -178,7 +178,7 @@
 	opag      http://www.zero-based.org/software/opag/
  */
 
-#define GETPARAM_VERSION_ID  "3.6f 31-jan-2013 PJT"
+#define GETPARAM_VERSION_ID  "3.7d 13-apr-2020 PJT"
 
 /*************** BEGIN CONFIGURATION TABLE *********************/
 
@@ -227,6 +227,16 @@
 #include <unistd.h>
 #include <ctype.h>
 
+
+//#if defined(ENABLE_OPENMP)
+#if _OPENMP
+#include <omp.h>
+local double omp_t1, omp_t2;
+#else
+typedef int omp_int_t;
+inline omp_int_t omp_get_thread_num() { return 0;}
+inline omp_int_t omp_get_max_threads() { return 1;}
+#endif
 
 #if defined(TCL7)
 # include <tcl.h>
@@ -445,6 +455,7 @@ void initparam(string argv[], string defv[])
     int i, j, nzeno, idx;
     bool posflag, useflag, defflag;
     string name;
+    char cmd[128];
     keyword *kw;
 
     progname = argv[0];        /* cheat in case local_error called early on */
@@ -528,8 +539,12 @@ void initparam(string argv[], string defv[])
         if (posflag) {                          /*   match by position?     */
             getparam_argc++;			/* count keywords */
             if (i > maxkeys) error("Too many un-named arguments");
-            if (streq(argv[i],"-help") || streq(argv[i],"--help") ||
-		streq(argv[i],"-h") || streq(argv[i],"help")) {
+	    if (streq(argv[i],"-man") || streq(argv[i],"--man")) {
+	      sprintf(cmd,"man %s",progname);
+	      local_exit( system(cmd) );
+	      /*NOTREACHED*/
+            } else if (streq(argv[i],"-help") || streq(argv[i],"--help") ||
+		       streq(argv[i],"-h") || streq(argv[i],"help")) {
 	      set_help("");
             } else if (streq(argv[i],"-version") || streq(argv[i],"--version")) {
 	      printhelp("V");    /* will also exit */
@@ -679,6 +694,7 @@ void initparam(string argv[], string defv[])
             error("(initparam) Error running editor (%s)",keybuf);
                         
 	readkeys("initparam(2)",(bool)FALSE);
+	free(edtcmd);
     }
 
     if (help_level&HELP_GLOBAL) {                /* write global keyword file */
@@ -688,8 +704,8 @@ void initparam(string argv[], string defv[])
 
     if (help_string) {
       /* also patch printhelp if you add characters to this strpbrk check */
-      if (      strpbrk(help_string,"oiapdqntkvhmc?")!=NULL ||
-              ( strpbrk(help_string,"oiapdqntkvhmc?")==NULL && 
+      if (      strpbrk(help_string,"oiapdqntkvhmcM?")!=NULL ||
+              ( strpbrk(help_string,"oiapdqntkvhmcM?")==NULL && 
                 strpbrk(help_string,"0123456789")==NULL
 		) )
 	printhelp(help_string);     /* give some help and possibly */
@@ -731,7 +747,22 @@ void initparam(string argv[], string defv[])
             warning("No VERSION keyword");
     }
 #endif
+
+#if _OPENMP    
+    // provide a trigger for OMP so our DL doesn't get upset about undefined GOMP symbols
+#pragma omp parallel
+    {
+      if (omp_get_thread_num() == 0) 
+	if (omp_get_num_threads() > 1) dprintf(1,"Using OpenMP with %d threads\n", omp_get_num_threads());
+      
+      omp_t1 = omp_get_wtime(); //start stop-watch
+    }
+#else
+    dprintf(1,"No OMP_NUM_THREADS used\n");
+#endif
+    
     initparam_out();
+    
 #ifndef __MINGW32__
     clock1 = times(&tms1);
 #endif
@@ -760,6 +791,14 @@ local void initparam_out()
 void finiparam()
 {
     int i, n=0;
+
+#if _OPENMP
+#pragma omp parallel
+    {
+      omp_t2 = omp_get_wtime();//stop stop-watch
+    }
+    dprintf(1,"Elapsed time: %g sec\n",omp_t2-omp_t1);	//print stopped time
+#endif
 #ifndef __MINGW32__
     if (report_cpu) report('c');
     if (report_mem) report('m');
@@ -910,6 +949,9 @@ local void scan_environment()
 #ifdef darwin
     if(environ == NULL) environ = * _NSGetEnviron();
 #endif
+    if ((ev=getenv("NEMO")) == NULL)
+      warning("$NEMO not defined");
+      
     for (i = 0; environ[i] != NULL; i++) {
     	/* printf("%d: \"%s\"\n",i+1,environ[i]); */
         if (streq("BELL", parname(environ[i])))
@@ -994,7 +1036,8 @@ local void printhelp(string help)
 {
     string *bp;
     int i, numl;
-
+    char cmd[128];
+    
     dprintf(1,"printhelp: help_string=%s\n",help);
 
     if (strchr(help,'?')) {
@@ -1012,6 +1055,7 @@ local void printhelp(string help)
 	printf("  o       >> show the output key names\n");
 	printf("  c       >> show cpu usage at the end of the run\n");
 	printf("  m       >> show memory usage at the end of the run\n");
+	printf("  M       >> man page (same as -man and --man)\n");
 	printf("  I       >> cvs id\n");
         printf("  ?       >> this help (always quits)\n\n");
         printf("Numeric helplevels determine degree and type of assistence:\n");
@@ -1064,7 +1108,7 @@ local void printhelp(string help)
 
     numl = ((strchr(help,'n')) ? 1 : 0);    /* add newlines between key=val ? */
 
-    if (strchr(help,'a') || strpbrk(help,"oapdqntvkzucm")==NULL) { /* arguments */
+    if (strchr(help,'a') || strpbrk(help,"oapdqntvkzucmM")==NULL) { /* arguments */
         printf("%s", progname);
         for (i=1; i<nkeys; i++) {
             newline(numl);
@@ -1073,7 +1117,7 @@ local void printhelp(string help)
         newline(1);
         if (strpbrk(help,"oapdqntvkzu")==NULL) {
 	  local_exit(0);
-            /*NOTREACHED*/
+	  /*NOTREACHED*/
         }
     }
 
@@ -1097,6 +1141,8 @@ local void printhelp(string help)
     
     if (strchr(help,'u')) {
         printf("%s\n",usage);
+	local_exit(0);
+	/*NOTREACHED*/	
     } /* 'u' */
 
     if (strchr(help,'o')) {
@@ -1111,6 +1157,12 @@ local void printhelp(string help)
 	warning("No output keys defined for this program");
       }
       local_exit(0);
+      /*NOTREACHED*/
+    }
+
+    if (strchr(help,'M')) {    
+      sprintf(cmd,"man %s",progname);
+      local_exit( system(cmd) );
       /*NOTREACHED*/
     }
 
@@ -1286,6 +1338,8 @@ local void printusage(string *defv)
     if(mpi_proc) fprintf(stderr,"@%d: ",mpi_rank);
     fprintf(stderr,
 	    "Insufficient parameters, try 'help=', 'help=?' or 'help=h' or 'man %s',\n", progname);
+    fprintf(stderr,
+	    "Online documentation might be here: https://teuben.github.io/nemo/man_html/%s.1.html\n", progname);
 	    
     if(mpi_proc) fprintf(stderr,"@%d: ",mpi_rank);
     fprintf(stderr,"Usage: %s", progname);
@@ -1312,7 +1366,7 @@ local string get_macro(char *mname)
 {
 #if defined(MACROREAD)
     char *cp, *mp;
-    int n;
+    int n, n1;
     stream fstr;    
 
     if (*mname != '@')  return mname;
@@ -1328,7 +1382,8 @@ local string get_macro(char *mname)
     }
 
     fstr = stropen(mname,"r");      /* open macro file (guaranteed ok)     */
-    fread(mp,sizeof(char),(unsigned)n,fstr);    /* oops, unix only here ?? */
+    n1 = fread(mp,sizeof(char),(unsigned)n,fstr);    /* oops, unix only here ?? */
+    if (n1 != n) error("error reading macro file \"%s\"\n",mname); /* should never happen */
     strclose(fstr);                 /* file is read in 'as is' in binary   */
     mp[n] = 0;  /* terminate - since mp could point anywhere */
 

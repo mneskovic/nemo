@@ -7,6 +7,7 @@
  *	22-may-90  V2.2  minor improvement for new getparam()	PJT
  *	24-jul-92  V2.3  new NEMO - etc. PJT
  *      15-feb-03  V2.4  added format=				PJT
+ *    10-dec-2019  V2.5  deal with PHI/ACC                      PJT
  */
 
 #include <stdinc.h>		/* also gets <stdio.h	*/
@@ -21,8 +22,8 @@ string defv[] = {
   "n=1\n              stride in time through the orbit",
   "maxsteps=10000\n   Maximum number of steps allowed",
   "format=%g\n        Format for output",
-  "mode=t,p,v\n       Output:  o,t,p,v",
-  "VERSION=2.4\n      15-feb-03 PJT",
+  "mode=t,p,v\n       Output:  o,t,p,v (not used)",
+  "VERSION=2.5\n      10-dec-2019 PJT",
   NULL,
 };
 
@@ -42,7 +43,7 @@ local int    n;
 local double trange[2];   /* time range to plot */
 local int maxsteps;
 
-nemo_main ()
+void nemo_main(void)
 {
 	int ndim;
 	string format = getparam("format");
